@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,7 @@ interface Order {
   estimated_delivery_minutes?: number
 }
 
-export default function AgradecimentoPage() {
+function AgradecimentoPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order')
@@ -437,5 +437,20 @@ export default function AgradecimentoPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AgradecimentoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <AgradecimentoPageContent />
+    </Suspense>
   )
 }
