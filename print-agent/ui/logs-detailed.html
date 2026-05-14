@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRANGO PRINT AGENT - Logs Detalhados</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            margin: 0; 
+            background: #1a1a1a; 
+            color: #00ff00; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .header {
+            background: #2D5A27;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1e3a1a;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .controls button {
+            background: #1e3a1a;
+            color: white;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .controls button:hover {
+            background: #00ff00;
+            color: #1a1a1a;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff00;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .filters {
+            background: #2a2a2a;
+            padding: 10px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filters label {
+            color: #00ff00;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .filters select, .filters input {
+            background: #1a1a1a;
+            color: #00ff00;
+            border: 1px solid #444;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-container {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .log-viewer {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-line {
+            margin: 1px 0;
+            padding: 2px 5px;
+            border-radius: 2px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .log-line:hover {
+            background: rgba(0, 255, 0, 0.1);
+        }
+        .timestamp {
+            color: #888;
+            margin-right: 10px;
+            min-width: 80px;
+            font-size: 11px;
+        }
+        .log-level {
+            margin-right: 10px;
+            min-width: 50px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .level-info { color: #00ff00; }
+        .level-warn { color: #ffff00; }
+        .level-error { color: #ff4444; }
+        .level-debug { color: #00ffff; }
+        .level-success { color: #00ff00; font-weight: bold; }
+        .message {
+            flex: 1;
+        }
+        .status-bar {
+            background: #2a2a2a;
+            padding: 5px 10px;
+            border-top: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #888;
+        }
+        .status-bar span {
+            color: #00ff00;
+        }
+        .search-highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .auto-scroll {
+            animation: scroll-to-bottom 0.3s ease-out;
+        }
+        @keyframes scroll-to-bottom {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 FRANGO PRINT AGENT - LOGS DETALHADOS</h1>
+        <div class="controls">
+            <div class="status-indicator"></div>
+            <button onclick="clearLogs()">🗑️ Limpar</button>
+            <button onclick="exportLogs()">📥 Exportar</button>
+            <button onclick="toggleAutoScroll()">📜 Auto Scroll: <span id="autoScrollStatus">ON</span></button>
+            <button onclick="refreshConnection()">🔄 Reconectar</button>
+            <button onclick="switchToOrders()">📋 Pedidos</button>
+            <button onclick="switchToConfig()">⚙️ Config</button>
+        </div>
+    </div>
+
+    <div class="filters">
+        <label>
+            Nível:
+            <select id="levelFilter" onchange="filterLogs()">
+                <option value="">Todos</option>
+                <option value="info">INFO</option>
+                <option value="warn">WARN</option>
+                <option value="error">ERROR</option>
+                <option value="debug">DEBUG</option>
+                <option value="success">SUCCESS</option>
+            </select>
+        </label>
+        <label>
+            Busca:
+            <input type="text" id="searchFilter" placeholder="Buscar nos logs..." oninput="filterLogs()">
+        </label>
+        <label>
+            Máximo de logs:
+            <select id="maxLogs" onchange="updateMaxLogs()">
+                <option value="1000">1000</option>
+                <option value="5000" selected>5000</option>
+                <option value="10000">10000</option>
+                <option value="0">Ilimitado</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="log-container">
+        <div class="log-viewer" id="logViewer"></div>
+    </div>
+
+    <div class="status-bar">
+        <div>
+            Logs: <span id="logCount">0</span> | 
+            Filtrados: <span id="filteredCount">0</span> | 
+            Status: <span id="connectionStatus">Desconectado</span>
+        </div>
+        <div>
+            Último atualização: <span id="lastUpdate">--:--:--</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8"></script>
+    <script>
+        // Configuração do Supabase (usando variáveis do .env)
+        const SUPABASE_URL = 'https://atjpbquidxzcugqojwvo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0anBicXVpZHh6Y3VncW9qd3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MjQ3NDcsImV4cCI6MjA5MzUwMDc0N30.F8ymK6MRcFVkOuRSE5Fpkasx8MgGyEpK2ialO8mnnwA';
+        const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0anBicXVpZHh6Y3VncW9qd3ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzkyNDc0NywiZXhwIjoyMDkzNTAwNzQ3fQ.7S6SBBGhlWOcPo6kiqRyIVi8o5fgJlWdsN_Z0OIhoGs';
+        const SUPABASE_JWT_SECRET = 'Y+7XgJV0Ds3M+IxTOD1TF3DdyBG8NoJ/qlURGy8THHEr1VY582c7hYiae61Ctbvw+0+fZG4kybgc5u30Y5r58g==';
+        
+        let supabaseClient = null;
+        let logs = [];
+        let autoScroll = true;
+        let maxLogs = 5000;
+        let connectionStatus = 'Desconectado';
+        let logCount = { info: 0, warn: 0, error: 0, debug: 0, success: 0 };
+
+        // Função para adicionar logs
+        function addLog(message, level = 'info', source = 'APP') {
+            const timestamp = new Date();
+            const logEntry = {
+                timestamp: timestamp,
+                timeString: timestamp.toLocaleTimeString('pt-BR', { hour12: false }),
+                level: level.toLowerCase(),
+                message: message,
+                source: source
+            };
+            
+            logs.push(logEntry);
+            
+            // Controle de máximo de logs
+            if (maxLogs > 0 && logs.length > maxLogs) {
+                logs = logs.slice(-maxLogs);
+            }
+            
+            // Atualizar contadores
+            if (logCount[logEntry.level] !== undefined) {
+                logCount[logEntry.level]++;
+            }
+            
+            // Adicionar ao visualizador
+            addLogToViewer(logEntry);
+            updateStatusBar();
+        }
+
+        // Função para adicionar log ao visualizador
+        function addLogToViewer(logEntry) {
+            const logViewer = document.getElementById('logViewer');
+            const logLine = document.createElement('div');
+            logLine.className = `log-line level-${logEntry.level}`;
+            
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            let message = logEntry.message;
+            
+            // Destacar termo de busca
+            if (searchTerm && message.toLowerCase().includes(searchTerm)) {
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                message = message.replace(regex, '<span class="search-highlight">$1</span>');
+            }
+            
+            logLine.innerHTML = `
+                <span class="timestamp">${logEntry.timeString}</span>
+                <span class="log-level level-${logEntry.level}">${logEntry.level}</span>
+                <span class="message">[${logEntry.source}] ${message}</span>
+            `;
+            
+            logViewer.appendChild(logLine);
+            
+            // Auto scroll
+            if (autoScroll) {
+                logViewer.scrollTop = logViewer.scrollHeight;
+                logLine.classList.add('auto-scroll');
+            }
+        }
+
+        // Função para inicializar Supabase
+        async function initializeSupabase() {
+            try {
+                addLog('🔍 Iniciando sistema de logs detalhados...', 'info', 'SYSTEM');
+                addLog('Verificando biblioteca Supabase...', 'debug', 'SYSTEM');
+                
+                // Adicionar logs de debug para verificar o estado
+                addLog(`window.supabase existe: ${typeof window.supabase}`, 'debug', 'SYSTEM');
+                addLog(`window disponível: ${typeof window}`, 'debug', 'SYSTEM');
+                addLog(`document.readyState: ${document.readyState}`, 'debug', 'SYSTEM');
+                
+                // Tentar carregar script se não estiver disponível
+                if (typeof window.supabase === 'undefined') {
+                    addLog('Biblioteca Supabase não encontrada, tentando carregar manualmente...', 'warn', 'SYSTEM');
+                    
+                    // Tentar carregar o script manualmente
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8';
+                    script.onload = () => {
+                        addLog('Script Supabase carregado manualmente', 'success', 'SYSTEM');
+                        setTimeout(() => initializeSupabase(), 1000);
+                    };
+                    script.onerror = () => {
+                        addLog('Falha ao carregar script Supabase manualmente', 'error', 'SYSTEM');
+                    };
+                    document.head.appendChild(script);
+                    return false;
+                }
+                
+                addLog(`Biblioteca Supabase encontrada: ${typeof window.supabase}`, 'debug', 'SYSTEM');
+                addLog(`Método createClient disponível: ${typeof window.supabase.createClient}`, 'debug', 'SYSTEM');
+                
+                addLog('Criando cliente Supabase...', 'info', 'SYSTEM');
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
+                addLog(`Cliente criado: ${typeof supabaseClient}`, 'debug', 'SYSTEM');
+                addLog(`Métodos disponíveis: ${Object.getOwnPropertyNames(supabaseClient).join(', ')}`, 'debug', 'SYSTEM');
+                
+                // Verificar se o método from existe
+                if (typeof supabaseClient.from !== 'function') {
+                    throw new Error('Método "from" não encontrado no cliente Supabase');
+                }
+                
+                addLog('✅ Cliente Supabase criado com sucesso', 'success', 'SYSTEM');
+                connectionStatus = 'Conectado';
+                updateStatusBar();
+                
+                // Testar conexão
+                await testConnection();
+                
+                return true;
+                
+            } catch (error) {
+                addLog(`❌ Erro ao inicializar Supabase: ${error.message}`, 'error', 'SYSTEM');
+                addLog(`Stack trace: ${error.stack}`, 'error', 'SYSTEM');
+                connectionStatus = 'Erro';
+                updateStatusBar();
+                return false;
+            }
+        }
+
+        // Testar conexão com o banco
+        async function testConnection() {
+            try {
+                addLog('Testando conexão com o banco...', 'info', 'SYSTEM');
+                
+                if (!supabaseClient) {
+                    throw new Error('Cliente Supabase não inicializado');
+                }
+                
+                addLog(`Cliente Supabase: ${typeof supabaseClient}`, 'debug', 'SYSTEM');
+                addLog(`Método 'from' disponível: ${typeof supabaseClient.from}`, 'debug', 'SYSTEM');
+                
+                // Query de teste
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('count')
+                    .limit(1);
+                
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+                
+                addLog('✅ Conexão com banco estabelecida com sucesso', 'success', 'SYSTEM');
+                connectionStatus = 'Conectado';
+                updateStatusBar();
+                
+                // Iniciar monitoramento
+                startMonitoring();
+                
+                return true;
+                
+            } catch (error) {
+                addLog(`❌ Erro de conexão: ${error.message}`, 'error', 'SYSTEM');
+                connectionStatus = 'Erro de Conexão';
+                updateStatusBar();
+                return false;
+            }
+        }
+
+        // Iniciar monitoramento de tabelas
+        async function startMonitoring() {
+            addLog('Iniciando monitoramento de tabelas...', 'info', 'SYSTEM');
+            
+            const tables = ['orders', 'print_jobs', 'products', 'order_items'];
+            
+            for (const tableName of tables) {
+                try {
+                    const { data, error, count } = await supabaseClient
+                        .from(tableName)
+                        .select('*', { count: 'exact', head: true })
+                        .limit(1);
+                    
+                    const status = error ? '❌ ERRO' : '✅ OK';
+                    const records = error ? 'N/A' : count || 0;
+                    
+                    addLog(`Tabela ${tableName}: ${status} (${records} registros)`, 
+                           error ? 'error' : 'success', 'DATABASE');
+                    
+                } catch (tableError) {
+                    addLog(`Erro na tabela ${tableName}: ${tableError.message}`, 'error', 'DATABASE');
+                }
+            }
+            
+            addLog('Monitoramento inicializado com sucesso', 'success', 'SYSTEM');
+        }
+
+        // Funções de controle da UI
+        function clearLogs() {
+            logs = [];
+            logCount = { info: 0, warn: 0, error: 0, debug: 0, success: 0 };
+            document.getElementById('logViewer').innerHTML = '';
+            updateStatusBar();
+            addLog('Logs limpos', 'info', 'SYSTEM');
+        }
+
+        function exportLogs() {
+            const logText = logs.map(log => 
+                `[${log.timeString}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `frango-print-agent-logs-${new Date().toISOString().slice(0,10)}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addLog('Logs exportados com sucesso', 'success', 'SYSTEM');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('autoScrollStatus').textContent = autoScroll ? 'ON' : 'OFF';
+            addLog(`Auto scroll ${autoScroll ? 'ativado' : 'desativado'}`, 'info', 'SYSTEM');
+        }
+
+        function updateMaxLogs() {
+            maxLogs = parseInt(document.getElementById('maxLogs').value) || 0;
+            addLog(`Máximo de logs atualizado para ${maxLogs === 0 ? 'ilimitado' : maxLogs}`, 'info', 'SYSTEM');
+        }
+
+        function filterLogs() {
+            const levelFilter = document.getElementById('levelFilter').value;
+            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+            const logViewer = document.getElementById('logViewer');
+            
+            logViewer.innerHTML = '';
+            
+            const filteredLogs = logs.filter(log => {
+                const levelMatch = !levelFilter || log.level === levelFilter;
+                const searchMatch = !searchFilter || log.message.toLowerCase().includes(searchFilter);
+                return levelMatch && searchMatch;
+            });
+            
+            filteredLogs.forEach(logEntry => addLogToViewer(logEntry));
+            
+            document.getElementById('filteredCount').textContent = filteredLogs.length;
+        }
+
+        function updateStatusBar() {
+            document.getElementById('logCount').textContent = logs.length;
+            document.getElementById('filteredCount').textContent = logs.length;
+            document.getElementById('connectionStatus').textContent = connectionStatus;
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('pt-BR');
+        }
+
+        async function refreshConnection() {
+            addLog('🔄 Reconectando ao Supabase...', 'info', 'SYSTEM');
+            connectionStatus = 'Reconectando';
+            updateStatusBar();
+            
+            await initializeSupabase();
+        }
+
+        function switchToOrders() {
+            addLog('Alternando para tela de pedidos...', 'info', 'SYSTEM');
+            if (window.agentApi && window.agentApi.switchScreen) {
+                window.agentApi.switchScreen('orders-list');
+            } else {
+                addLog('API de navegação não disponível', 'error', 'SYSTEM');
+            }
+        }
+
+        function switchToConfig() {
+            addLog('Alternando para tela de configuração...', 'info', 'SYSTEM');
+            if (window.agentApi && window.agentApi.switchScreen) {
+                window.agentApi.switchScreen('index');
+            } else {
+                addLog('API de navegação não disponível', 'error', 'SYSTEM');
+            }
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', async function() {
+            addLog('🚀 FRANGO PRINT AGENT - Sistema de Logs Detalhados', 'success', 'SYSTEM');
+            addLog('Inicializando componentes...', 'info', 'SYSTEM');
+            
+            await initializeSupabase();
+            
+            // Simular logs do sistema
+            setInterval(() => {
+                if (connectionStatus === 'Conectado') {
+                    addLog('Sistema operacional', 'debug', 'HEARTBEAT');
+                }
+            }, 30000); // Heartbeat a cada 30 segundos
+        });
+
+        // Capturar erros globais
+        window.addEventListener('error', function(event) {
+            addLog(`Erro global: ${event.error.message}`, 'error', 'GLOBAL');
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            addLog(`Promise rejeitada: ${event.reason}`, 'error', 'GLOBAL');
+        });
+    </script>
+</body>
+</html>

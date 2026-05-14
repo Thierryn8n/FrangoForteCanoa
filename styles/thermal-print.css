@@ -1,0 +1,142 @@
+/**
+ * Estilos otimizados para impressão em impressoras térmicas Epson
+ * Estes estilos garantem texto escuro, nítido e legível
+ */
+
+/* Reset para impressão térmica */
+.thermal-receipt,
+.thermal-print {
+  font-family: 'Courier New', 'Courier', monospace !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  line-height: 1.3 !important;
+  color: #000 !important;
+  background: #fff !important;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: unset !important;
+  text-rendering: geometricPrecision !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* Tamanhos de fonte para hierarquia */
+.thermal-receipt .store-name,
+.thermal-print .store-name {
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1px !important;
+}
+
+.thermal-receipt .section-title,
+.thermal-print .section-title {
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  border-bottom: 2px dashed #000 !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 8px !important;
+}
+
+.thermal-receipt .total-row,
+.thermal-print .total-row {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  border-top: 3px solid #000 !important;
+  padding-top: 4px !important;
+  margin-top: 4px !important;
+}
+
+.thermal-receipt .item-name,
+.thermal-print .item-name {
+  font-weight: 900 !important;
+}
+
+.thermal-receipt .item-price,
+.thermal-print .item-price {
+  font-weight: 900 !important;
+}
+
+/* Linhas e bordas */
+.thermal-receipt .line-thick,
+.thermal-print .line-thick {
+  border-top: 3px solid #000 !important;
+  margin: 6px 0 !important;
+}
+
+.thermal-receipt .line-thin,
+.thermal-print .line-thin {
+  border-top: 1px solid #000 !important;
+  margin: 4px 0 !important;
+}
+
+.thermal-receipt .dashed,
+.thermal-print .dashed {
+  border-top: 2px dashed #000 !important;
+  margin: 6px 0 !important;
+}
+
+/* Alinhamento */
+.thermal-receipt .center,
+.thermal-print .center {
+  text-align: center !important;
+}
+
+.thermal-receipt .right,
+.thermal-print .right {
+  text-align: right !important;
+}
+
+.thermal-receipt .left,
+.thermal-print .left {
+  text-align: left !important;
+}
+
+/* Espaçamento */
+.thermal-receipt .spacer,
+.thermal-print .spacer {
+  height: 8px !important;
+}
+
+.thermal-receipt .spacer-lg,
+.thermal-print .spacer-lg {
+  height: 16px !important;
+}
+
+/* Itens */
+.thermal-receipt .item,
+.thermal-print .item {
+  margin-bottom: 8px !important;
+  font-weight: 900 !important;
+}
+
+/* Print media queries */
+@media print {
+  .thermal-receipt,
+  .thermal-print {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 5px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Forçar background branco e texto preto */
+  * {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Ocultar na tela principal */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}

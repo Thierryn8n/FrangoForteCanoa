@@ -1,0 +1,69 @@
+{
+  "name": "frango-print-agent",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Agente local de impressao automatica em tempo real",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:headless": "node index.js",
+    "gen:icon": "node scripts/generate-ico.js",
+    "build:exe": "npm run gen:icon && electron-builder --win nsis",
+    "watch": "node build-watch.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.39.8",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8"
+  },
+  "build": {
+    "appId": "com.frangoforte.printagent",
+    "productName": "FRANGO PRINT AGENT",
+    "directories": {
+      "output": "dist"
+    },
+    "artifactName": "${productName} Setup ${version}.${ext}",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.js",
+      "agent-core.js",
+      "ui/**/*",
+      "build/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "executableName": "FRANGO PRINT AGENT",
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "shortcutName": "FRANGO PRINT AGENT",
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "include": "build/installer.nsh",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    }
+  }
+}

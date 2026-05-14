@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FRANGO PRINT AGENT</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f7; color: #222; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .title { font-size: 22px; font-weight: 700; margin: 0; }
+    .brand { display:flex; align-items:center; gap:10px; margin: 0 0 12px; }
+    .brand img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+    .card h3 { margin: 0 0 10px; font-size: 15px; }
+    label { display: block; font-size: 12px; margin: 6px 0 4px; color: #555; }
+    input, select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px; border: 1px solid #ccc; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; padding: 9px 12px; cursor: pointer; background: #111827; color: #fff; font-weight: 600; }
+    button.secondary { background: #4b5563; }
+    button.warn { background: #b45309; }
+    button.danger { background: #dc2626; }
+    .status { font-weight: 700; }
+    .logs { width: 100%; height: 240px; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-family: Consolas, monospace; font-size: 12px; padding: 8px; }
+    .muted { color: #666; font-size: 12px; }
+    .ok { color: #059669; }
+    .off { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <img src="../build/icon.png" alt="Logo Frango Forte" />
+      <h1 class="title">FRANGO PRINT AGENT</h1>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Configuração</h3>
+        <label>SUPABASE_URL</label>
+        <input id="supabaseUrl" />
+        <label>SERVICE_ROLE_KEY</label>
+        <input id="serviceRoleKey" />
+        <label>Impressora</label>
+        <div class="row">
+          <select id="printerName" style="flex:1"></select>
+          <button id="refreshPrinters" class="secondary">Atualizar</button>
+        </div>
+        <label>Intervalo de Polling (ms)</label>
+        <input id="pollMs" type="number" min="1000" step="500" />
+        <label>Agent ID</label>
+        <input id="agentId" />
+        <label><input id="autoStart" type="checkbox" style="width:auto" /> Iniciar automático ao abrir app</label>
+        <div class="row" style="margin-top:10px">
+          <button id="saveConfig">Salvar Config</button>
+          <button id="testPrint" class="warn">Teste de Impressão</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Controle</h3>
+        <p>Status: <span id="status" class="status off">PARADO</span></p>
+        <p class="muted">Log: <span id="logPath">...</span></p>
+        <div class="row">
+          <button id="startAgent">Iniciar</button>
+          <button id="stopAgent" class="danger">Parar</button>
+          <button id="reloadLogs" class="secondary">Recarregar Logs</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Logs</h3>
+      <textarea id="logs" class="logs" readonly></textarea>
+    </div>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FRANGO PRINT AGENT - Pedidos</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f7; color: #222; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .title { font-size: 22px; font-weight: 700; margin: 0; }
+    .brand { display:flex; align-items:center; gap:10px; margin: 0 0 12px; }
+    .brand img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; }
+    .filters { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .filter-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .order-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; position: relative; }
+    .order-card.pending { border-left: 4px solid #f59e0b; }
+    .order-card.printed { border-left: 4px solid #10b981; opacity: 0.7; }
+    .order-card.completed { border-left: 4px solid #3b82f6; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+    .order-id { font-weight: bold; color: #2D5A27; font-size: 16px; }
+    .order-date { font-size: 12px; color: #666; }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-printed { background: #d1fae5; color: #065f46; }
+    .status-completed { background: #dbeafe; color: #1e40af; }
+    .customer-info { margin-bottom: 12px; }
+    .customer-info strong { color: #2D5A27; }
+    .items-list { margin: 12px 0; max-height: 150px; overflow-y: auto; }
+    .item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+    .order-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .summary-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; }
+    .total-row { font-weight: bold; font-size: 14px; color: #2D5A27; border-top: 2px solid #2D5A27; padding-top: 8px; margin-top: 8px; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 12px; }
+    .btn-primary { background: #2D5A27; color: #fff; }
+    .btn-primary:hover { background: #1e3a1a; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-warning { background: #f59e0b; color: #fff; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .error { background: #fee; color: #c00; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .success { background: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-number { font-size: 24px; font-weight: bold; color: #2D5A27; }
+    .stat-label { font-size: 12px; color: #666; }
+    .header-actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    label { display: block; font-size: 12px; margin: 4px 0; color: #555; }
+    input, select { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <img src="../build/icon.png" alt="Logo Frango Forte" />
+      <h1 class="title">Pedidos para Impressão</h1>
+    </div>
+
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <div class="stat-number" id="totalOrders">0</div>
+        <div class="stat-label">Total de Pedidos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="pendingOrders">0</div>
+        <div class="stat-label">Pendentes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="printedOrders">0</div>
+        <div class="stat-label">Impressos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="todayOrders">0</div>
+        <div class="stat-label">Hoje</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <h3>Filtros</h3>
+      <div class="filter-row">
+        <div>
+          <label>Status</label>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+            <option value="pending">Pendentes</option>
+            <option value="printed">Impressos</option>
+            <option value="completed">Concluídos</option>
+          </select>
+        </div>
+        <div>
+          <label>Forma de Pagamento</label>
+          <select id="paymentFilter">
+            <option value="">Todas</option>
+            <option value="pix">PIX</option>
+            <option value="credit">Crédito</option>
+            <option value="debit">Débito</option>
+            <option value="money">Dinheiro</option>
+          </select>
+        </div>
+        <div>
+          <label>Período</label>
+          <select id="periodFilter">
+            <option value="">Todos</option>
+            <option value="today">Hoje</option>
+            <option value="yesterday">Ontem</option>
+            <option value="week">Esta Semana</option>
+            <option value="month">Este Mês</option>
+          </select>
+        </div>
+        <div>
+          <label>Busca</label>
+          <input type="text" id="searchFilter" placeholder="Nome do cliente ou ID do pedido" />
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div>
+        <span id="filteredCount">Mostrando 0 pedidos</span>
+      </div>
+      <div>
+        <button class="btn-primary" onclick="loadOrders()">🔄 Atualizar</button>
+        <button class="btn-success" onclick="printAllPending()">🖨️ Imprimir Pendentes</button>
+        <button class="btn-warning" onclick="markAllAsPrinted()">✅ Marcar como Impressos</button>
+        <button class="btn-info" onclick="switchToLogs()">🔍 Logs Detalhados</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+      <h2>🔄 Carregando pedidos...</h2>
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="success" class="success" style="display: none;"></div>
+
+    <div id="orders-container" class="orders-grid"></div>
+  </div>
+
+  <script>
+    // Configuração do Supabase (usando variáveis do .env)
+    const SUPABASE_URL = 'https://atjpbquidxzcugqojwvo.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0anBicXVpZHh6Y3VncW9qd3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MjQ3NDcsImV4cCI6MjA5MzUwMDc0N30.F8ymK6MRcFVkOuRSE5Fpkasx8MgGyEpK2ialO8mnnwA';
+    const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0anBicXVpZHh6Y3VncW9qd3ZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzkyNDc0NywiZXhwIjoyMDkzNTAwNzQ3fQ.7S6SBBGhlWOcPo6kiqRyIVi8o5fgJlWdsN_Z0OIhoGs';
+    const SUPABASE_JWT_SECRET = 'Y+7XgJV0Ds3M+IxTOD1TF3DdyBG8NoJ/qlURGy8THHEr1VY582c7hYiae61Ctbvw+0+fZG4kybgc5u30Y5r58g==';
+    
+    // Aguardar o Supabase estar disponível
+    let supabase;
+    
+    function initSupabase() {
+      try {
+        console.log('Verificando biblioteca Supabase...');
+        
+        // Adicionar logs de debug para verificar o estado
+        console.log(`window.supabase existe: ${typeof window.supabase}`);
+        console.log(`window disponível: ${typeof window}`);
+        console.log(`document.readyState: ${document.readyState}`);
+        
+        // Tentar carregar script se não estiver disponível
+        if (typeof window.supabase === 'undefined') {
+          console.log('Biblioteca Supabase não encontrada, tentando carregar manualmente...');
+          
+          // Tentar carregar o script manualmente
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8';
+          script.onload = () => {
+            console.log('Script Supabase carregado manualmente');
+            setTimeout(() => initSupabase(), 1000);
+          };
+          script.onerror = () => {
+            console.error('Falha ao carregar script Supabase manualmente');
+          };
+          document.head.appendChild(script);
+          return false;
+        }
+        
+        console.log(`Biblioteca Supabase encontrada: ${typeof window.supabase}`);
+        console.log(`Método createClient disponível: ${typeof window.supabase.createClient}`);
+        
+        console.log('Criando cliente Supabase...');
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        console.log(`Cliente criado: ${typeof supabase}`);
+        console.log(`Métodos disponíveis: ${Object.getOwnPropertyNames(supabase)}`);
+        
+        // Verificar se o método from existe
+        if (typeof supabase.from !== 'function') {
+          throw new Error('Método "from" não encontrado no cliente Supabase');
+        }
+        
+        console.log('✅ Cliente Supabase criado com sucesso');
+        return true;
+        
+      } catch (error) {
+        console.error(`❌ Erro ao inicializar Supabase: ${error.message}`);
+        console.error(`Stack trace: ${error.stack}`);
+        return false;
+      }
+    }
+    
+    let allOrders = [];
+    let filteredOrders = [];
+
+    // Inicializar quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM carregado, inicializando Supabase...');
+      
+      // Tentar inicializar imediatamente
+      if (!initSupabase()) {
+        // Se falhar, tentar novamente após um pequeno delay
+        setTimeout(() => {
+          if (!initSupabase()) {
+            // Se ainda falhar, tentar a cada 1 segundo por 10 segundos
+            let attempts = 0;
+            const initInterval = setInterval(() => {
+              attempts++;
+              console.log(`Tentativa ${attempts} de inicializar Supabase`);
+              if (initSupabase() || attempts >= 10) {
+                clearInterval(initInterval);
+                if (attempts >= 10) {
+                  showError('Não foi possível inicializar o Supabase após várias tentativas. Recarregue a página.');
+                }
+              }
+            }, 1000);
+          }
+        }, 100);
+      }
+      
+      // Iniciar carregamento dos pedidos após inicialização
+      setTimeout(() => {
+        console.log('Verificando se Supabase está inicializado antes de carregar pedidos...');
+        console.log(`Variável supabase: ${typeof supabase}`);
+        console.log(`supabase.from: ${typeof supabase?.from}`);
+        
+        if (supabase && typeof supabase.from === 'function') {
+          loadOrders();
+          // Iniciar realtime após carregar pedidos
+          setTimeout(startRealtime, 2000);
+        } else {
+          console.error('Supabase não foi inicializado corretamente. Verifique o console para mais detalhes.');
+          showError('Supabase não foi inicializado. Verifique o console para mais detalhes.');
+        }
+      }, 3000); // Aumentado para 3 segundos para dar tempo do script carregar
+    });
+
+    async function loadOrders() {
+      try {
+        showLoading(true);
+        hideMessages();
+        
+        console.log('Iniciando carregamento de pedidos...');
+        console.log(`Cliente Supabase: ${typeof supabase}`);
+        console.log(`Método 'from' disponível: ${typeof supabase?.from}`);
+        
+        if (!supabase) {
+          throw new Error('Cliente Supabase não inicializado');
+        }
+        
+        if (typeof supabase.from !== 'function') {
+          throw new Error('Método "from" não disponível no cliente Supabase');
+        }
+        
+        console.log('Executando query na tabela orders...');
+        
+        // Buscar todos os pedidos recentes (qualquer status, filtramos no JS por printed_at)
+        const { data: ordersData, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (*)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (error) {
+          throw error;
+        }
+
+        allOrders = ordersData || [];
+        applyFilters();
+        updateStats();
+        
+        showSuccess(`${allOrders.length} pedidos carregados com sucesso!`);
+        
+      } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+        showError('Erro ao carregar pedidos: ' + error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function applyFilters() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const paymentFilter = document.getElementById('paymentFilter').value;
+      const periodFilter = document.getElementById('periodFilter').value;
+      const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+
+      filteredOrders = allOrders.filter(order => {
+        // Filtro de status
+        if (statusFilter) {
+          if (statusFilter === 'pending' && order.printed_at) return false;
+          if (statusFilter === 'printed' && !order.printed_at) return false;
+          if (statusFilter === 'completed' && order.status !== 'completed') return false;
+        }
+
+        // Filtro de pagamento
+        if (paymentFilter && order.payment_method !== paymentFilter) {
+          return false;
+        }
+
+        // Filtro de período
+        if (periodFilter) {
+          const orderDate = new Date(order.created_at);
+          const today = new Date();
+          
+          if (periodFilter === 'today') {
+            if (orderDate.toDateString() !== today.toDateString()) return false;
+          } else if (periodFilter === 'yesterday') {
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (orderDate.toDateString() !== yesterday.toDateString()) return false;
+          } else if (periodFilter === 'week') {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            if (orderDate < weekAgo) return false;
+          } else if (periodFilter === 'month') {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            if (orderDate < monthAgo) return false;
+          }
+        }
+
+        // Filtro de busca
+        if (searchFilter) {
+          const customerName = (order.customer_name || '').toLowerCase();
+          const orderId = (order.id || '').toLowerCase();
+          if (!customerName.includes(searchFilter) && !orderId.includes(searchFilter)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      renderOrders();
+      updateFilteredCount();
+    }
+
+    function updateStats() {
+      const today = new Date().toDateString();
+      const todayOrders = allOrders.filter(order => 
+        new Date(order.created_at).toDateString() === today
+      );
+      const pendingOrders = allOrders.filter(order => !order.printed_at);
+      const printedOrders = allOrders.filter(order => order.printed_at);
+
+      document.getElementById('totalOrders').textContent = allOrders.length;
+      document.getElementById('pendingOrders').textContent = pendingOrders.length;
+      document.getElementById('printedOrders').textContent = printedOrders.length;
+      document.getElementById('todayOrders').textContent = todayOrders.length;
+    }
+
+    function updateFilteredCount() {
+      document.getElementById('filteredCount').textContent = 
+        `Mostrando ${filteredOrders.length} pedidos`;
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('orders-container');
+      container.innerHTML = '';
+
+      filteredOrders.forEach(order => {
+        const orderCard = createOrderCard(order);
+        container.appendChild(orderCard);
+      });
+    }
+
+    function createOrderCard(order) {
+      const card = document.createElement('div');
+      card.className = 'order-card';
+      
+      // Adicionar classes de status
+      if (order.printed_at) {
+        card.classList.add('printed');
+      } else if (order.status === 'completed') {
+        card.classList.add('completed');
+      } else {
+        card.classList.add('pending');
+      }
+
+      // Calcular subtotal
+      let subtotal = 0;
+      const itemsHtml = (order.order_items || []).map(item => {
+        const itemTotal = (item.quantity || 1) * (item.product_price || 0);
+        subtotal += itemTotal;
+        return `
+          <div class="item">
+            <span>${item.product_name} - ${item.quantity || 1}x R$ ${(item.product_price || 0).toFixed(2)}</span>
+            <span>R$ ${itemTotal.toFixed(2)}</span>
+          </div>
+        `;
+      }).join('');
+
+      const paymentMethod = order.payment_method === 'pix' ? 'PIX' :
+                         order.payment_method === 'credit' ? 'Crédito' :
+                         order.payment_method === 'debit' ? 'Débito' :
+                         order.payment_method === 'money' ? 'Dinheiro' :
+                         order.payment_method || 'N/A';
+
+      const paymentStatus = order.payment_status === 'paid' ? 'PAGO' : 'PENDENTE';
+
+      // Determinar status badge
+      let statusBadge = '';
+      let statusClass = '';
+      if (order.printed_at) {
+        statusBadge = 'IMPRESSO';
+        statusClass = 'status-printed';
+      } else if (order.status === 'completed') {
+        statusBadge = 'CONCLUÍDO';
+        statusClass = 'status-completed';
+      } else {
+        statusBadge = 'PENDENTE';
+        statusClass = 'status-pending';
+      }
+
+      card.innerHTML = `
+        <div class="order-header">
+          <div>
+            <div class="order-id">Pedido #${order.id.slice(-8)}</div>
+            <div class="order-date">${new Date(order.created_at).toLocaleString('pt-BR')}</div>
+          </div>
+          <div class="status-badge ${statusClass}">${statusBadge}</div>
+        </div>
+        
+        <div class="customer-info">
+          <strong>Cliente:</strong> ${order.customer_name || 'N/A'}<br>
+          ${order.customer_phone ? `<strong>Telefone:</strong> ${order.customer_phone}<br>` : ''}
+          ${order.customer_address ? `<strong>Endereço:</strong> ${order.customer_address}<br>` : ''}
+          <strong>Pagamento:</strong> ${paymentMethod} - ${paymentStatus}
+        </div>
+
+        <div class="items-list">
+          ${itemsHtml}
+        </div>
+
+        <div class="order-summary">
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span>R$ ${subtotal.toFixed(2)}</span>
+          </div>
+          <div class="summary-row">
+            <span>Taxa Entrega:</span>
+            <span>R$ ${(order.delivery_fee || 0).toFixed(2)}</span>
+          </div>
+          <div class="summary-row total-row">
+            <span>TOTAL:</span>
+            <span>R$ ${(order.total || 0).toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" onclick="printOrder('${order.id}')">
+            🖨️ Imprimir
+          </button>
+          ${!order.printed_at ? `
+            <button class="btn-success" onclick="markAsPrinted('${order.id}')">
+              ✅ Marcar
+            </button>
+          ` : ''}
+          <button class="btn-warning" onclick="viewDetails('${order.id}')">
+            👁️ Detalhes
+          </button>
+        </div>
+      `;
+
+      return card;
+    }
+
+    async function printOrder(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const printContent = formatPrintContent(order);
+      
+      // Criar janela de impressão
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Imprimir Pedido #${order.id.slice(-8)}</title>
+            <style>
+              body { 
+                font-family: 'Courier New', monospace; 
+                font-size: 12px; 
+                white-space: pre-wrap; 
+                margin: 20px;
+                line-height: 1.2;
+              }
+              @media print {
+                body { margin: 0; }
+              }
+            </style>
+          </head>
+          <body>${printContent}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    function formatPrintContent(order) {
+      const lines = [
+        'FRANGO FORTE PDV',
+        'COMPROVANTE DE PEDIDO',
+        '='.repeat(40),
+        `Pedido: #${order.id.slice(-8)}`,
+        `Data: ${new Date(order.created_at).toLocaleString('pt-BR')}`,
+        `Canal: CAIXA`,
+        '',
+        'CLIENTE',
+        `Nome: ${order.customer_name || 'N/A'}`,
+        order.customer_phone ? `Telefone: ${order.customer_phone}` : '',
+        order.customer_address ? `Endereço: ${order.customer_address}` : '',
+        '',
+        'ITENS'
+      ];
+
+      let subtotal = 0;
+      (order.order_items || []).forEach(item => {
+        const itemTotal = (item.quantity || 1) * (item.product_price || 0);
+        subtotal += itemTotal;
+        lines.push(
+          `${item.product_name} - ${item.quantity || 1} x R$ ${(item.product_price || 0).toFixed(2)} = R$ ${itemTotal.toFixed(2)}`
+        );
+      });
+
+      lines.push('='.repeat(40));
+      lines.push(`Subtotal: R$ ${subtotal.toFixed(2)}`);
+      lines.push(`Taxa Entrega: R$ ${(order.delivery_fee || 0).toFixed(2)}`);
+      lines.push(`TOTAL: R$ ${(order.total || 0).toFixed(2)}`);
+      lines.push('');
+      lines.push('PAGAMENTO');
+      
+      const paymentMethod = order.payment_method === 'pix' ? 'PIX' :
+                         order.payment_method === 'credit' ? 'Crédito' :
+                         order.payment_method === 'debit' ? 'Débito' :
+                         order.payment_method === 'money' ? 'Dinheiro' :
+                         order.payment_method || 'N/A';
+      
+      lines.push(`Forma: ${paymentMethod}`);
+      
+      const paymentStatus = order.payment_status === 'paid' ? 'PAGO' : 'PENDENTE';
+      lines.push(`Status: ${paymentStatus}`);
+      
+      if (order.notes) {
+        lines.push('');
+        lines.push(`Obs: ${order.notes}`);
+      }
+      
+      lines.push('='.repeat(40));
+      lines.push('Documento não fiscal');
+      lines.push('Obrigado pela preferência!');
+      lines.push('');
+
+      return lines.join('\n');
+    }
+
+    async function markAsPrinted(orderId) {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update({
+            printed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        showSuccess('Pedido marcado como impresso!');
+        loadOrders(); // Recarregar lista
+      } catch (error) {
+        showError('Erro ao marcar pedido como impresso: ' + error.message);
+      }
+    }
+
+    async function printAllPending() {
+      const pendingOrders = filteredOrders.filter(o => !o.printed_at);
+      
+      if (pendingOrders.length === 0) {
+        showError('Nenhum pedido pendente para imprimir!');
+        return;
+      }
+
+      for (const order of pendingOrders) {
+        await printOrder(order.id);
+        // Pequeno delay entre impressões
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      showSuccess(`${pendingOrders.length} pedidos enviados para impressão!`);
+    }
+
+    async function markAllAsPrinted() {
+      const pendingOrders = filteredOrders.filter(o => !o.printed_at);
+      
+      if (pendingOrders.length === 0) {
+        showError('Nenhum pedido pendente para marcar!');
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update({
+            printed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .in('id', pendingOrders.map(o => o.id));
+
+        if (error) throw error;
+
+        showSuccess(`${pendingOrders.length} pedidos marcados como impressos!`);
+        loadOrders(); // Recarregar lista
+      } catch (error) {
+        showError('Erro ao marcar pedidos como impressos: ' + error.message);
+      }
+    }
+
+    function viewDetails(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      alert(`Detalhes do Pedido #${order.id.slice(-8)}\n\n` +
+            `Cliente: ${order.customer_name}\n` +
+            `Telefone: ${order.customer_phone || 'N/A'}\n` +
+            `Total: R$ ${(order.total || 0).toFixed(2)}\n` +
+            `Status: ${order.status}\n` +
+            `Impresso: ${order.printed_at ? 'Sim' : 'Não'}`);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('success');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideMessages() {
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('success').style.display = 'none';
+    }
+
+    function switchToLogs() {
+      console.log('Alternando para tela de logs detalhados...');
+      if (window.agentApi && window.agentApi.switchScreen) {
+        window.agentApi.switchScreen('logs-detailed');
+      } else {
+        console.error('API de navegação não disponível');
+      }
+    }
+
+    // Realtime com Supabase para atualização automática
+    function startRealtime() {
+      if (!supabase) {
+        console.log('Supabase não inicializado, aguardando...');
+        setTimeout(startRealtime, 2000);
+        return;
+      }
+
+      console.log('Iniciando realtime com Supabase...');
+      
+      // Subscribe para mudanças na tabela orders
+      const ordersSubscription = supabase
+        .channel('orders-changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'orders' 
+          }, 
+          (payload) => {
+            console.log('Mudança detectada na tabela orders:', payload);
+            handleRealtimeUpdate(payload);
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime conectado com sucesso!');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Erro no canal realtime:', status);
+            setTimeout(startRealtime, 5000); // Tentar reconectar
+          }
+        });
+
+      // Subscribe para mudanças na tabela order_items
+      const orderItemsSubscription = supabase
+        .channel('order-items-changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'order_items' 
+          }, 
+          (payload) => {
+            console.log('Mudança detectada na tabela order_items:', payload);
+            handleRealtimeUpdate(payload);
+          }
+        )
+        .subscribe();
+
+      console.log('Realtime subscriptions criadas com sucesso');
+    }
+
+    function handleRealtimeUpdate(payload) {
+      const { eventType, new: newRecord, old: oldRecord } = payload;
+      
+      switch (eventType) {
+        case 'INSERT':
+          console.log('Novo pedido inserido:', newRecord);
+          showSuccess('Novo pedido recebido! Atualizando lista...');
+          break;
+        case 'UPDATE':
+          console.log('Pedido atualizado:', newRecord);
+          if (oldRecord.status !== newRecord.status) {
+            showSuccess(`Status do pedido #${newRecord.id.slice(-8)} atualizado para ${newRecord.status}`);
+          }
+          break;
+        case 'DELETE':
+          console.log('Pedido removido:', oldRecord);
+          break;
+      }
+      
+      // Recarregar lista de pedidos após pequeno delay
+      setTimeout(() => {
+        loadOrders();
+      }, 1000);
+    }
+
+    // Adicionar event listeners para filtros
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('paymentFilter').addEventListener('change', applyFilters);
+    document.getElementById('periodFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchFilter').addEventListener('input', applyFilters);
+
+    // Auto-refresh a cada 30 segundos
+    setInterval(loadOrders, 30000);
+
+    // Carregar pedidos ao iniciar
+    loadOrders();
+  </script>
+</body>
+</html>
