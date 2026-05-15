@@ -1,15 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, MoreVertical, Package } from 'lucide-react'
+import { Plus, Search, Edit, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import type { Product } from '@/lib/types'
 import { DeleteProductButton } from '@/components/admin/delete-product-button'
 
@@ -149,24 +143,14 @@ export default async function ProductsPage() {
                           </span>
                         )}
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/admin/produtos/${product.id}`}>
                           <Button variant="ghost" size="icon">
-                            <MoreVertical className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/produtos/${product.id}`}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <DeleteProductButton productId={product.id} />
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </Link>
+                        <DeleteProductButton productId={product.id} />
+                      </div>
                     </div>
                   </div>
                 </div>
