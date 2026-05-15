@@ -11,22 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Product } from '@/lib/types'
-import { revalidatePath } from 'next/cache'
-
-async function deleteProductAction(productId: string) {
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', productId)
-
-  if (error) {
-    console.error('Error deleting product:', error)
-    throw error
-  }
-
-  revalidatePath('/admin/produtos')
-}
+import { DeleteProductButton } from '@/components/admin/delete-product-button'
 
 async function getProducts(): Promise<Product[]> {
   const supabase = await createClient()
@@ -178,16 +163,7 @@ export default async function ProductsPage() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <form action={deleteProductAction.bind(null, product.id)} onSubmit={(e) => {
-                              if (!confirm('Tem certeza que deseja excluir este produto?')) {
-                                e.preventDefault()
-                              }
-                            }}>
-                              <button type="submit" className="w-full flex items-center text-destructive">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
-                              </button>
-                            </form>
+                            <DeleteProductButton productId={product.id} />
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
