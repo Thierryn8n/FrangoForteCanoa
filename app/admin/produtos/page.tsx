@@ -11,6 +11,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Product } from '@/lib/types'
+import { deleteProduct } from '@/lib/actions/pdv'
+import { revalidatePath } from 'next/cache'
+
+async function deleteProductAction(productId: string) {
+  await deleteProduct(productId)
+  revalidatePath('/admin/produtos')
+}
 
 async function getProducts(): Promise<Product[]> {
   const supabase = await createClient()
@@ -161,9 +168,13 @@ export default async function ProductsPage() {
                               Editar
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
+                          <DropdownMenuItem asChild>
+                            <form action={deleteProductAction.bind(null, product.id)}>
+                              <button type="submit" className="w-full flex items-center text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </button>
+                            </form>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
