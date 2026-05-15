@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 export function DeleteProductButton({ productId }: { productId: string }) {
   const [isDeleting, setIsDeleting] = useState(false)
@@ -21,28 +20,27 @@ export function DeleteProductButton({ productId }: { productId: string }) {
       })
 
       if (!response.ok) {
-        throw new Error('Falha ao excluir produto')
+        const error = await response.json()
+        throw new Error(error.error || 'Falha ao excluir produto')
       }
 
-      window.location.href = '/admin/produtos'
+      window.location.reload()
     } catch (error) {
       console.error('Erro ao excluir produto:', error)
-      alert('Erro ao excluir produto')
+      alert('Erro ao excluir produto: ' + (error as Error).message)
     } finally {
       setIsDeleting(false)
     }
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
       onClick={handleDelete}
       disabled={isDeleting}
-      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+      className="p-2 hover:bg-red-100 rounded-lg text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      title="Excluir produto"
     >
-      <Trash2 className="w-4 h-4 mr-2" />
-      {isDeleting ? 'Excluindo...' : 'Excluir'}
-    </Button>
+      <Trash2 className="w-4 h-4" />
+    </button>
   )
 }
