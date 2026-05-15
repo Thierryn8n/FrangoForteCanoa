@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
 export async function POST(request: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
     const { items, customer } = await request.json()
 
     if (!items || items.length === 0) {
@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
 // Webhook para atualizar status de pedido
 export async function PUT(request: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
     const { paymentIntentId, orderData } = await request.json()
 
     // Retrieve payment intent
