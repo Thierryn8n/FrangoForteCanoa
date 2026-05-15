@@ -11,11 +11,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Product } from '@/lib/types'
-import { deleteProduct } from '@/lib/actions/pdv'
 import { revalidatePath } from 'next/cache'
 
 async function deleteProductAction(productId: string) {
-  await deleteProduct(productId)
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId)
+
+  if (error) {
+    console.error('Error deleting product:', error)
+    throw error
+  }
+
   revalidatePath('/admin/produtos')
 }
 
