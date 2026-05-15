@@ -178,7 +178,11 @@ export default async function ProductsPage() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <form action={deleteProductAction.bind(null, product.id)}>
+                            <form action={deleteProductAction.bind(null, product.id)} onSubmit={(e) => {
+                              if (!confirm('Tem certeza que deseja excluir este produto?')) {
+                                e.preventDefault()
+                              }
+                            }}>
                               <button type="submit" className="w-full flex items-center text-destructive">
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Excluir
