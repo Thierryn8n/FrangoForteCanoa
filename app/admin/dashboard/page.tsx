@@ -1,32 +1,65 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts, getWeeklyReports } from '@/lib/actions/stock'
 import { TrendingUp, TrendingDown, Package, DollarSign, AlertTriangle, ShoppingBag, Users, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
-export default async function AdminDashboardPage() {
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
-  
-  // Buscar dados do dia
-  const todayOpening = await getTodayStockOpening()
-  const dailyReport = await getDailyReport(today)
-  const farmPrices = await getFarmPriceHistory()
-  const operationalCosts = await getOperationalCosts()
+export default function AdminDashboardPage() {
+  const [loading, setLoading] = useState(true)
+  const [todayOpening, setTodayOpening] = useState<any>(null)
+  const [dailyReport, setDailyReport] = useState<any>(null)
+  const [farmPrices, setFarmPrices] = useState<any[]>([])
+  const [operationalCosts, setOperationalCosts] = useState<any[]>([])
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [weeklyReports, setWeeklyReports] = useState<any[]>([])
+  const [tablesExist, setTablesExist] = useState(true)
 
-  // Buscar pedidos recentes
-  const { data: recentOrders } = await supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(5)
+  useEffect(() => {
+    async function fetchData() {
+      const supabase = createClient()
+      const today = new Date().toISOString().split('T')[0]
+      
+      try {
+        const [opening, report, prices, costs, orders, prods, weekly] = await Promise.all([
+          getTodayStockOpening(),
+          getDailyReport(today),
+          getFarmPriceHistory(),
+          getOperationalCosts(),
+          supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(5),
+          supabase.from('products').select('*').eq('is_active', true),
+          getWeeklyReports(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today)
+        ])
 
-  // Buscar produtos
-  const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('is_active', true)
+        setTodayOpening(opening)
+        setDailyReport(report)
+        setFarmPrices(prices || [])
+        setOperationalCosts(costs || [])
+        setRecentOrders(orders?.data || [])
+        setProducts(prods?.data || [])
+        setWeeklyReports(weekly || [])
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+        setTablesExist(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Carregando...</p>
+      </div>
+    )
+  }
 
   const formatCurrency = (num: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -53,10 +86,6 @@ export default async function AdminDashboardPage() {
 
   const latestFarmPrice = farmPrices?.[0]?.price_per_kg || 0
   const totalOperationalCost = operationalCosts?.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0) || 0
-
-  // Buscar relatórios da última semana para gráficos
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const weeklyReports = await getWeeklyReports(weekAgo, today)
 
   // Preparar dados para gráficos
   const salesData = weeklyReports?.map((r: any) => ({
@@ -89,6 +118,31 @@ export default async function AdminDashboardPage() {
           Visão geral do sistema de gestão de estoque e vendas
         </p>
       </div>
+
+      {!tablesExist && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <AlertTriangle className="w-6 h-6 text-orange-600 mt-1" />
+              <div>
+                <h3 className="font-semibold text-orange-900 mb-2">Tabelas não criadas no Supabase</h3>
+                <p className="text-orange-800 mb-4">
+                  As tabelas do sistema de gestão de estoque ainda não foram criadas no banco de dados.
+                  Execute as migrations SQL na seguinte ordem:
+                </p>
+                <ol className="list-decimal list-inside space-y-2 text-orange-800">
+                  <li><code>20260515210000_create_stock_management_tables.sql</code></li>
+                  <li><code>20260515220000_create_alerts_table.sql</code></li>
+                  <li><code>20260515230000_create_users_with_roles.sql</code></li>
+                </ol>
+                <p className="text-sm text-orange-700 mt-4">
+                  Acesse o painel do Supabase → SQL Editor e execute os arquivos nesta ordem.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
