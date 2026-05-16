@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { EcommerceOrder, EcommerceOrderItem, Coupon, DeliveryArea, PrintJob } from '@/lib/types'
 import { createPrintJob } from '@/lib/actions/pdv'
 import { generateReceiptHTML, generateReceiptText } from '@/lib/print-agent'
+import { getTodayStockOpening, createStockTransaction, getDailyStockItems } from './stock'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,6 +36,40 @@ export async function createEcommerceOrder(
   // Incrementar uso do cupom se usado
   if (order.coupon_id) {
     await supabase.rpc('increment_coupon_usage', { coupon_uuid: order.coupon_id })
+  }
+
+  // Registrar transações de estoque automaticamente
+  try {
+    const todayOpening = await getTodayStockOpening()
+    if (todayOpening) {
+      const stockItems = await getDailyStockItems(todayOpening.id)
+      
+      for (const item of items) {
+        // Encontrar o item de estoque correspondente
+        const stockItem = stockItems.find(si => si.product_id === item.product_id)
+        
+        if (stockItem) {
+          const weightKg = item.weight_kg || 1
+          const unitPrice = item.price_per_kg || 0
+          const totalValue = item.total_price || 0
+          
+          await createStockTransaction({
+            opening_id: todayOpening.id,
+            stock_item_id: stockItem.id,
+            transaction_type: 'sale',
+            quantity: weightKg,
+            unit: 'kg',
+            unit_price: unitPrice,
+            total_value: totalValue,
+            order_id: newOrder.id,
+            notes: `Venda E-commerce - ${item.product_name}`
+          })
+        }
+      }
+    }
+  } catch (stockError) {
+    console.error('createEcommerceOrder - stockError:', stockError)
+    // Não falhar o pedido se o registro de estoque falhar
   }
 
   // Criar print job para impressão automática
