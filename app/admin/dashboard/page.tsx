@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts } from '@/lib/actions/stock'
+import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts, getWeeklyReports } from '@/lib/actions/stock'
 import { TrendingUp, TrendingDown, Package, DollarSign, AlertTriangle, ShoppingBag, Users, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
@@ -52,6 +53,32 @@ export default async function AdminDashboardPage() {
 
   const latestFarmPrice = farmPrices?.[0]?.price_per_kg || 0
   const totalOperationalCost = operationalCosts?.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0) || 0
+
+  // Buscar relatórios da última semana para gráficos
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const weeklyReports = await getWeeklyReports(weekAgo, today)
+
+  // Preparar dados para gráficos
+  const salesData = weeklyReports?.map((r: any) => ({
+    date: new Date(r.report_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+    vendas: Number(r.total_sales),
+    lucro: Number(r.net_profit),
+    custo: Number(r.total_cost)
+  })) || []
+
+  const costData = operationalCosts?.reduce((acc: any, c: any) => {
+    const type = c.cost_type
+    if (!acc[type]) acc[type] = 0
+    acc[type] += Number(c.amount)
+    return acc
+  }, {}) || {}
+
+  const costChartData = Object.entries(costData).map(([type, amount]) => ({
+    name: type === 'labor' ? 'Mão de Obra' : type === 'transport' ? 'Transporte' : type === 'slaughter' ? 'Abate' : type === 'energy' ? 'Energia' : type === 'packaging' ? 'Embalagem' : 'Outros',
+    value: Number(amount)
+  }))
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
 
   return (
     <div className="space-y-6">
@@ -110,6 +137,70 @@ export default async function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(latestFarmPrice)}/KG</div>
             <p className="text-xs text-muted-foreground">Preço atual do frango</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vendas e Lucro (Última Semana)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {salesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="vendas" fill="#0088FE" name="Vendas" />
+                  <Bar dataKey="lucro" fill="#00C49F" name="Lucro" />
+                  <Bar dataKey="custo" fill="#FF8042" name="Custo" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Sem dados suficientes para o gráfico</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Cost Distribution Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribuição de Custos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {costChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={costChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {costChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Sem custos registrados</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
