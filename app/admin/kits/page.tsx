@@ -1,16 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Search, Edit, Trash2, MoreVertical, Percent } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import type { Kit } from '@/lib/types'
+import { DeleteKitButton } from '@/components/admin/delete-kit-button'
 
 async function getKits(): Promise<Kit[]> {
   const supabase = await createClient()
@@ -133,25 +128,14 @@ export default async function KitsPage() {
                         {kit.contents}
                       </p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/kits/${kit.id}`}>
                         <Button variant="ghost" size="icon">
-                          <MoreVertical className="w-4 h-4" />
+                          <Edit className="w-4 h-4" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/kits/${kit.id}`}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </Link>
+                      <DeleteKitButton kitId={kit.id} />
+                    </div>
                   </div>
 
                   {/* Price */}
