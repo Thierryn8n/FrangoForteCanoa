@@ -1,0 +1,303 @@
+import { createClient } from '@/lib/supabase/server'
+import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts } from '@/lib/actions/stock'
+import { TrendingUp, TrendingDown, Package, DollarSign, AlertTriangle, ShoppingBag, Users, Clock } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+
+export default async function AdminDashboardPage() {
+  const supabase = await createClient()
+  const today = new Date().toISOString().split('T')[0]
+  
+  // Buscar dados do dia
+  const todayOpening = await getTodayStockOpening()
+  const dailyReport = await getDailyReport(today)
+  const farmPrices = await getFarmPriceHistory()
+  const operationalCosts = await getOperationalCosts()
+
+  // Buscar pedidos recentes
+  const { data: recentOrders } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Buscar produtos
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+
+  const formatCurrency = (num: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(num)
+  }
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num)
+  }
+
+  const formatDate = (date: string) => {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date))
+  }
+
+  const latestFarmPrice = farmPrices?.[0]?.price_per_kg || 0
+  const totalOperationalCost = operationalCosts?.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0) || 0
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard Administrativo</h1>
+        <p className="text-muted-foreground mt-1">
+          Visão geral do sistema de gestão de estoque e vendas
+        </p>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vendas do Dia</CardTitle>
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(Number(dailyReport?.total_sales) || 0)}</div>
+            <p className="text-xs text-muted-foreground">
+              {dailyReport?.products_sold_count || 0} produtos vendidos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${(Number(dailyReport?.net_profit) || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {formatCurrency(Number(dailyReport?.net_profit) || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">Lucro do dia</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Estoque Disponível</CardTitle>
+            <Package className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(Number(dailyReport?.total_quantity_sold) || 0)} KG</div>
+            <p className="text-xs text-muted-foreground">Vendido hoje</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Preço da Granja</CardTitle>
+            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(latestFarmPrice)}/KG</div>
+            <p className="text-xs text-muted-foreground">Preço atual do frango</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Orders */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Pedidos Recentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!recentOrders || recentOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <ShoppingBag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Nenhum pedido recente</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentOrders.map((order: any) => (
+                  <div key={order.id} className="flex items-center justify-between border-b pb-3 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{order.customer_name || 'Cliente'}</p>
+                        <p className="text-sm text-muted-foreground">{formatDate(order.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{formatCurrency(Number(order.total))}</p>
+                      <p className="text-xs text-muted-foreground">{order.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ações Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/admin/estoque">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <Package className="w-4 h-4" />
+                  <span className="font-medium">Gerenciar Estoque</span>
+                </div>
+              </div>
+            </Link>
+            <Link href="/admin/relatorios">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="font-medium">Ver Relatórios</span>
+                </div>
+              </div>
+            </Link>
+            <Link href="/admin/custos/granja">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="font-medium">Custos da Granja</span>
+                </div>
+              </div>
+            </Link>
+            <Link href="/admin/produtos">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <ShoppingBag className="w-4 h-4" />
+                  <span className="font-medium">Gerenciar Produtos</span>
+                </div>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alerts Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Alertas e Notificações
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {!todayOpening && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  <div>
+                    <p className="font-medium text-yellow-800">Estoque do dia não foi aberto</p>
+                    <p className="text-sm text-yellow-700">Abra o estoque para começar a vender</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {products && products.length > 0 && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-blue-800">{products.length} produtos ativos</p>
+                    <p className="text-sm text-blue-700">Produtos disponíveis para venda</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {operationalCosts && operationalCosts.length > 0 && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-800">{operationalCosts.length} custos registrados</p>
+                    <p className="text-sm text-green-700">Total: {formatCurrency(totalOperationalCost)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(!todayOpening && !products && !operationalCosts) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Nenhum alerta no momento</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Performance Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Resumo de Custos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Custo de Produtos</span>
+                <span className="font-bold">{formatCurrency(Number(dailyReport?.total_cost) || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Custos Operacionais</span>
+                <span className="font-bold">{formatCurrency(totalOperationalCost)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-4">
+                <span className="font-medium">Custo Total</span>
+                <span className="font-bold text-red-500">
+                  {formatCurrency((Number(dailyReport?.total_cost) || 0) + totalOperationalCost)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Resumo de Vendas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Vendas Totais</span>
+                <span className="font-bold">{formatCurrency(Number(dailyReport?.total_sales) || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Lucro Bruto</span>
+                <span className="font-bold">{formatCurrency(Number(dailyReport?.gross_profit) || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t pt-4">
+                <span className="font-medium">Lucro Líquido</span>
+                <span className={`font-bold ${(Number(dailyReport?.net_profit) || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatCurrency(Number(dailyReport?.net_profit) || 0)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
