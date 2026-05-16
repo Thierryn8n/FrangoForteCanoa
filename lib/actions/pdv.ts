@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { PdvProduct, PdvOrder, PdvOrderItem, PrintJob, Kit } from '@/lib/types'
 import { generateReceiptText } from '@/lib/print-agent'
+import { getTodayStockOpening, createStockTransaction, getDailyStockItems } from './stock'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -237,7 +238,7 @@ export async function createPdvOrder(order: Partial<PdvOrder>, items: Partial<Pd
     // Criar print job para impressão automática (como no e-commerce)
     if (order.payment_method === 'pix' && order.status === 'completed') {
       try {
-        const storeSettings = await getStoreSettingsForPrint()
+        const storeSettings = await getStoreSettings()
         const payload = {
           order_number: parseInt(newOrder.id?.slice(-8) || '0', 16),
           customer_name: order.customer_name,
@@ -263,6 +264,40 @@ export async function createPdvOrder(order: Partial<PdvOrder>, items: Partial<Pd
         console.error('createPdvOrder - printError:', printError)
         // Não falhar o pedido se a impressão falhar
       }
+    }
+
+    // Registrar transações de estoque automaticamente
+    try {
+      const todayOpening = await getTodayStockOpening()
+      if (todayOpening) {
+        const stockItems = await getDailyStockItems(todayOpening.id)
+        
+        for (const item of items) {
+          // Encontrar o item de estoque correspondente
+          const stockItem = stockItems.find(si => si.product_id === item.product_id)
+          
+          if (stockItem) {
+            const weightKg = item.weight_kg || 1
+            const unitPrice = item.price_per_kg || 0
+            const totalValue = item.total_price || 0
+            
+            await createStockTransaction({
+              opening_id: todayOpening.id,
+              stock_item_id: stockItem.id,
+              transaction_type: 'sale',
+              quantity: weightKg,
+              unit: 'kg',
+              unit_price: unitPrice,
+              total_value: totalValue,
+              order_id: newOrder.id,
+              notes: `Venda PDV - ${item.product_name}`
+            })
+          }
+        }
+      }
+    } catch (stockError) {
+      console.error('createPdvOrder - stockError:', stockError)
+      // Não falhar o pedido se o registro de estoque falhar
     }
 
     return newOrder
