@@ -242,3 +242,102 @@ export async function createOperationalCost(cost: {
   if (error) throw error
   return data
 }
+
+// === RELATÓRIOS ===
+
+export async function generateDailyReport(date: string) {
+  // Buscar abertura de estoque do dia
+  const { data: opening } = await supabase
+    .from('daily_stock_opening')
+    .select('*')
+    .eq('opening_date', date)
+    .single()
+
+  if (!opening) return null
+
+  // Buscar itens de estoque
+  const { data: stockItems } = await supabase
+    .from('daily_stock_items')
+    .select('*')
+    .eq('opening_id', opening.id)
+
+  // Buscar transações
+  const { data: transactions } = await supabase
+    .from('stock_transactions')
+    .select('*')
+    .eq('opening_id', opening.id)
+
+  // Buscar custos operacionais do dia
+  const { data: operationalCosts } = await supabase
+    .from('operational_costs')
+    .select('*')
+    .eq('date', date)
+
+  // Calcular totais
+  const totalSales = transactions?.reduce((sum, t) => sum + (Number(t.total_value) || 0), 0) || 0
+  const totalQuantitySold = transactions?.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0) || 0
+  const totalCost = stockItems?.reduce((sum, item) => sum + (Number(item.total_cost) || 0), 0) || 0
+  const operationalCost = operationalCosts?.reduce((sum, c) => sum + (Number(c.amount) || 0), 0) || 0
+  const totalCostWithOperational = totalCost + operationalCost
+  const grossProfit = totalSales - totalCost
+  const netProfit = grossProfit - operationalCost
+
+  // Criar ou atualizar relatório diário
+  const { data: report } = await supabase
+    .from('daily_reports')
+    .upsert({
+      report_date: date,
+      opening_id: opening.id,
+      total_sales: totalSales,
+      total_cost: totalCostWithOperational,
+      gross_profit: grossProfit,
+      net_profit: netProfit,
+      total_quantity_sold: totalQuantitySold,
+      products_sold_count: transactions?.length || 0
+    })
+    .select()
+    .single()
+
+  return report
+}
+
+export async function getDailyReport(date: string) {
+  const { data, error } = await supabase
+    .from('daily_reports')
+    .select('*')
+    .eq('report_date', date)
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    throw error
+  }
+
+  return data
+}
+
+export async function getWeeklyReports(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from('daily_reports')
+    .select('*')
+    .gte('report_date', startDate)
+    .lte('report_date', endDate)
+    .order('report_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function getMonthlyReports(year: number, month: number) {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+  const endDate = `${year}-${String(month).padStart(2, '0')}-31`
+
+  const { data, error } = await supabase
+    .from('daily_reports')
+    .select('*')
+    .gte('report_date', startDate)
+    .lte('report_date', endDate)
+    .order('report_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
