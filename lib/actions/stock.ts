@@ -211,7 +211,16 @@ export async function createFarmPriceRecord(record: {
 export async function getOperationalCosts(startDate?: string, endDate?: string) {
   let query = supabase
     .from('operational_costs')
-    .select('*')
+    .select(`
+      *,
+      operational_cost_categories (
+        id,
+        name,
+        slug,
+        icon,
+        color
+      )
+    `)
     .order('date', { ascending: false })
 
   if (startDate) {
@@ -232,10 +241,102 @@ export async function createOperationalCost(cost: {
   amount: number
   date: string
   notes?: string
+  category_id?: string
+  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly' | 'onetime'
+  payment_method?: 'cash' | 'card' | 'pix' | 'transfer' | 'boleto'
+  due_date?: string
+  is_recurring?: boolean
+  next_payment_date?: string
+  estimated_duration_days?: number
+  quantity_purchased?: number
+  unit?: string
+  vehicle_mileage?: number
+  average_consumption?: number
 }) {
   const { data, error } = await supabase
     .from('operational_costs')
     .insert([cost])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getOperationalCostCategories() {
+  const { data, error } = await supabase
+    .from('operational_cost_categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('name')
+
+  if (error) throw error
+  return data
+}
+
+export async function createOperationalCostCategory(category: {
+  name: string
+  slug: string
+  description?: string
+  icon?: string
+  color?: string
+}) {
+  const { data, error } = await supabase
+    .from('operational_cost_categories')
+    .insert([category])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getOperationalCostPriceHistory(costId: string) {
+  const { data, error } = await supabase
+    .from('operational_cost_price_history')
+    .select('*')
+    .eq('cost_id', costId)
+    .order('purchase_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function createOperationalCostPriceHistory(record: {
+  cost_id: string
+  price: number
+  quantity?: number
+  unit_price?: number
+  purchase_date: string
+  supplier?: string
+  notes?: string
+}) {
+  const { data, error } = await supabase
+    .from('operational_cost_price_history')
+    .insert([record])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getRecurringCosts() {
+  const { data, error } = await supabase
+    .from('operational_costs')
+    .select('*')
+    .eq('is_recurring', true)
+    .order('next_payment_date', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function updateOperationalCostNextPayment(costId: string, nextPaymentDate: string) {
+  const { data, error } = await supabase
+    .from('operational_costs')
+    .update({ next_payment_date: nextPaymentDate })
+    .eq('id', costId)
     .select()
     .single()
 

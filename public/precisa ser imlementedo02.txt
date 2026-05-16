@@ -1,0 +1,206 @@
+Sistema Avançado de Custos Operacionais
+
+A página de Custos Operacionais não deve ser apenas um CRUD simples de adicionar valores.
+Ela precisa funcionar como um sistema financeiro inteligente e detalhado, capaz de acompanhar todos os gastos reais da operação da empresa ao longo do tempo.
+
+O objetivo dessa página é permitir controle total dos custos da empresa, mostrando:
+
+Quanto está sendo gasto
+Em qual período
+Qual categoria gera mais despesas
+Como os custos afetam o lucro final
+Evolução dos preços ao longo dos meses
+Estrutura Completa da Página de Custos Operacionais
+Cadastro Inteligente de Custos
+
+Cada custo operacional deve possuir informações detalhadas.
+
+Campos obrigatórios:
+Nome do custo
+Categoria
+Valor
+Data de entrada do custo
+Data de vencimento
+Frequência do custo
+Forma de pagamento
+Observações
+Categorias de Custos
+
+O sistema deve permitir categorias personalizadas.
+
+Exemplos:
+Gás
+Gasolina
+Energia
+Água
+Funcionários
+Embalagens
+Transporte
+Ração
+Manutenção
+Limpeza
+Equipamentos
+Fretes
+Impostos
+Controle por Data e Histórico de Valores
+
+O sistema precisa funcionar com histórico de preços, porque os valores mudam constantemente.
+
+Exemplo do gás:
+
+Hoje o gás custa:
+
+R$140,00
+
+Porém:
+
+O gás dura apenas 20 dias
+A empresa compra aproximadamente 2 botijões por mês
+O custo mensal chega próximo de R$300,00
+
+O sistema deve registrar:
+
+Data da compra
+Valor pago
+Quantidade comprada
+Duração estimada
+Próxima previsão de compra
+Exemplo da gasolina:
+
+A gasolina também sofre alteração constante.
+
+Exemplo:
+Semana 1: R$200,00
+Semana 2: R$240,00
+Semana 3: R$180,00
+
+O sistema deve armazenar:
+
+Valor por abastecimento
+Data do abastecimento
+Quilometragem do veículo
+Consumo médio
+Gasto semanal
+Gasto mensal
+Sistema de Custos Recorrentes
+
+Quero que exista uma opção de:
+
+“Custo recorrente”
+
+Exemplo:
+
+Gás → a cada 20 dias
+Combustível → semanal
+Energia → mensal
+Funcionário → mensal
+
+O sistema automaticamente:
+
+Calcula previsão do próximo pagamento
+Mostra alertas
+Gera estimativa mensal
+Gera estimativa anual
+Integração com o Estoque e Vendas
+
+Os custos operacionais devem impactar diretamente:
+
+O lucro
+O preço final do KG
+O balanço financeiro
+
+Exemplo:
+O sistema deve entender que:
+
+O gás usado no abate gera custo operacional
+A gasolina usada nas entregas também
+A energia elétrica impacta o custo do produto
+
+Então o sistema deve calcular automaticamente:
+
+Custo operacional por KG vendido
+Lucro real
+Margem de lucro real
+Prejuízo operacional
+Dashboard Financeiro Inteligente
+
+Os custos operacionais devem aparecer integrados no dashboard principal.
+
+O dashboard deve mostrar:
+Total gasto hoje
+Total gasto na semana
+Total gasto no mês
+Categoria que mais gera despesa
+Evolução dos custos
+Comparação entre meses
+Custos fixos
+Custos variáveis
+Gráficos e Análises
+
+O sistema deve possuir gráficos modernos e detalhados.
+
+Exemplos:
+Gráfico de:
+Gastos por categoria
+Evolução do combustível
+Evolução do gás
+Lucro vs custo operacional
+Comparação mensal
+Crescimento das despesas
+Relatórios Financeiros
+Relatório diário:
+Quanto entrou
+Quanto saiu
+Lucro do dia
+Custos operacionais do dia
+Relatório semanal:
+Média de gastos
+Média de vendas
+Comparação de lucro
+Relatório mensal:
+Faturamento bruto
+Custos operacionais totais
+Lucro líquido
+Produto mais lucrativo
+Categoria que mais gera despesa
+Sistema de Alertas Inteligentes
+
+O sistema deve avisar automaticamente:
+
+Quando um custo subir muito
+Quando houver aumento anormal
+Quando estiver próximo de faltar gás
+Quando os custos estiverem reduzindo o lucro
+Quando um custo recorrente estiver próximo do vencimento
+Integração Completa Entre Páginas
+
+A página de custos operacionais não pode funcionar isolada.
+
+Ela deve estar integrada com:
+
+Dashboard principal
+Estoque
+Vendas
+Relatórios
+Financeiro
+Produção
+Lucro líquido
+Cálculo de preço do KG
+Objetivo Principal
+
+O objetivo é transformar a página de custos operacionais em um sistema financeiro completo e inteligente, permitindo controle absoluto de:
+
+Tudo que entra
+Tudo que sai
+Custos reais da operação
+Lucro verdadeiro da empresa
+Evolução financeira do negócio
+
+Tudo isso de forma:
+
+Automática
+Organizada
+Moderna
+Visual
+Fácil de administrar
+Extremamente detalhada.
