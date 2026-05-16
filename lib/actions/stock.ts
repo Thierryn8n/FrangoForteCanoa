@@ -495,6 +495,100 @@ export async function getFinancialSummary(startDate: string, endDate: string): P
   }
 }
 
+export async function getOperationalCostAlerts() {
+  const costs = await getOperationalCosts()
+  const today = new Date()
+  const alerts: any[] = []
+  
+  for (const cost of costs) {
+    // Alerta de vencimento próximo (3 dias)
+    if (cost.due_date) {
+      const dueDate = new Date(cost.due_date)
+      const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysUntilDue <= 3 && daysUntilDue >= 0) {
+        alerts.push({
+          type: 'due_soon',
+          severity: daysUntilDue <= 1 ? 'high' : 'medium',
+          message: `Custo "${cost.description}" vence em ${daysUntilDue} dia${daysUntilDue !== 1 ? 's' : ''}`,
+          costId: cost.id,
+          cost
+        })
+      } else if (daysUntilDue < 0) {
+        alerts.push({
+          type: 'overdue',
+          severity: 'high',
+          message: `Custo "${cost.description}" está ${Math.abs(daysUntilDue)} dia${Math.abs(daysUntilDue) !== 1 ? 's' : ''} em atraso`,
+          costId: cost.id,
+          cost
+        })
+      }
+    }
+    
+    // Alerta de próximo pagamento recorrente
+    if (cost.is_recurring && cost.next_payment_date) {
+      const nextPayment = new Date(cost.next_payment_date)
+      const daysUntilPayment = Math.ceil((nextPayment.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysUntilPayment <= 3 && daysUntilPayment >= 0) {
+        alerts.push({
+          type: 'recurring_payment',
+          severity: daysUntilPayment <= 1 ? 'high' : 'medium',
+          message: `Pagamento recorrente "${cost.description}" em ${daysUntilPayment} dia${daysUntilPayment !== 1 ? 's' : ''}`,
+          costId: cost.id,
+          cost
+        })
+      }
+    }
+  }
+  
+  // Alerta de aumento de custos (comparar com mês anterior)
+  const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1).toISOString().split('T')[0]
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+  
+  const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+  const currentMonthEnd = today.toISOString().split('T')[0]
+  
+  const [lastMonthCosts, currentMonthCosts] = await Promise.all([
+    getOperationalCosts(lastMonthStart, lastMonthEnd),
+    getOperationalCosts(currentMonthStart, currentMonthEnd)
+  ])
+  
+  const lastMonthTotal = lastMonthCosts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+  const currentMonthTotal = currentMonthCosts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+  
+  if (lastMonthTotal > 0) {
+    const increase = ((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100
+    if (increase > 20) {
+      alerts.push({
+        type: 'cost_increase',
+        severity: 'medium',
+        message: `Custos operacionais aumentaram ${increase.toFixed(1)}% em relação ao mês anterior`,
+        data: {
+          lastMonth: lastMonthTotal,
+          currentMonth: currentMonthTotal,
+          increase
+        }
+      })
+    }
+  }
+  
+  return alerts
+}
+
+export async function getAlertsSummary() {
+  const alerts = await getOperationalCostAlerts()
+  
+  return {
+    total: alerts.length,
+    high: alerts.filter(a => a.severity === 'high').length,
+    medium: alerts.filter(a => a.severity === 'medium').length,
+    low: alerts.filter(a => a.severity === 'low').length,
+    alerts
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {
