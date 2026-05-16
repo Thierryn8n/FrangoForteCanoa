@@ -14,10 +14,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const category = await request.json()
+    console.log('Creating category:', category)
     const newCategory = await createStockCategory(category)
     return NextResponse.json(newCategory)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating stock category:', error)
-    return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Failed to create category',
+      details: error.message,
+      code: error.code
+    }, { status: 500 })
   }
 }
