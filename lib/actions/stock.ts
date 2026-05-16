@@ -344,6 +344,61 @@ export async function updateOperationalCostNextPayment(costId: string, nextPayme
   return data
 }
 
+export async function calculateNextPaymentDate(frequency: string, lastDate: string): Promise<string> {
+  const date = new Date(lastDate)
+  
+  switch (frequency) {
+    case 'daily':
+      date.setDate(date.getDate() + 1)
+      break
+    case 'weekly':
+      date.setDate(date.getDate() + 7)
+      break
+    case 'biweekly':
+      date.setDate(date.getDate() + 14)
+      break
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1)
+      break
+    case 'quarterly':
+      date.setMonth(date.getMonth() + 3)
+      break
+    case 'yearly':
+      date.setFullYear(date.getFullYear() + 1)
+      break
+    default:
+      return lastDate
+  }
+  
+  return date.toISOString().split('T')[0]
+}
+
+export async function processRecurringCosts() {
+  const recurringCosts = await getRecurringCosts()
+  const today = new Date().toISOString().split('T')[0]
+  
+  for (const cost of recurringCosts) {
+    if (cost.next_payment_date && cost.next_payment_date <= today) {
+      const nextDate = await calculateNextPaymentDate(cost.frequency, cost.next_payment_date)
+      await updateOperationalCostNextPayment(cost.id, nextDate)
+      
+      // Criar novo registro de custo
+      await createOperationalCost({
+        cost_type: cost.cost_type,
+        description: cost.description,
+        amount: cost.amount,
+        date: today,
+        notes: `Custo recorrente gerado automaticamente. ${cost.notes || ''}`,
+        category_id: cost.category_id,
+        frequency: cost.frequency,
+        payment_method: cost.payment_method,
+        is_recurring: true,
+        next_payment_date: nextDate
+      })
+    }
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {
