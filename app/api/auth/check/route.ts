@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     // Retornar dados do usuário se estiver autenticado
     return NextResponse.json({
       success: true,
+      authenticated: !!user,
       user: user ? {
         id: user.id,
         email: user.email,
