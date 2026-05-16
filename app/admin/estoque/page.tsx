@@ -1,27 +1,40 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { DailyStockOpeningModal } from '@/components/admin/daily-stock-opening-modal'
 import { getTodayStockOpening, getDailyStockItems } from '@/lib/actions/stock'
 import { Package, Scale, TrendingUp, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default async function StockManagementPage() {
-  const supabase = await createClient()
-  
-  let todayOpening = null
-  let stockItems = []
-  let tablesExist = true
+export default function StockManagementPage() {
+  const [loading, setLoading] = useState(true)
+  const [todayOpening, setTodayOpening] = useState<any>(null)
+  const [stockItems, setStockItems] = useState<any[]>([])
+  const [tablesExist, setTablesExist] = useState(true)
+  const [showModal, setShowModal] = useState(false)
 
-  try {
-    todayOpening = await getTodayStockOpening()
-    
-    if (todayOpening) {
-      stockItems = await getDailyStockItems(todayOpening.id)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const opening = await getTodayStockOpening()
+        setTodayOpening(opening)
+        
+        if (opening) {
+          const items = await getDailyStockItems(opening.id)
+          setStockItems(items || [])
+        }
+      } catch (error) {
+        console.error('Error accessing stock tables:', error)
+        setTablesExist(false)
+      } finally {
+        setLoading(false)
+      }
     }
-  } catch (error) {
-    console.error('Error accessing stock tables:', error)
-    tablesExist = false
-  }
+
+    fetchData()
+  }, [])
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -48,6 +61,14 @@ export default async function StockManagementPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Carregando...</p>
+      </div>
+    )
+  }
+
   // Calcular totais
   const totalInitial = stockItems.reduce((sum, item) => sum + (Number(item.initial_quantity) || 0), 0)
   const totalCurrent = stockItems.reduce((sum, item) => sum + (Number(item.current_quantity) || 0), 0)
@@ -71,11 +92,9 @@ export default async function StockManagementPage() {
           </Button>
         )}
         {!todayOpening && tablesExist && (
-          <DailyStockOpeningModal
-            isOpen={true}
-            onClose={() => {}}
-            onComplete={() => {}}
-          />
+          <Button onClick={() => setShowModal(true)}>
+            Abrir Estoque do Dia
+          </Button>
         )}
       </div>
 
@@ -102,6 +121,17 @@ export default async function StockManagementPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {showModal && tablesExist && (
+        <DailyStockOpeningModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onComplete={() => {
+            setShowModal(false)
+            window.location.reload()
+          }}
+        />
       )}
 
       {/* Summary Cards */}
