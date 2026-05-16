@@ -7,11 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function StockManagementPage() {
   const supabase = await createClient()
-  const todayOpening = await getTodayStockOpening()
   
+  let todayOpening = null
   let stockItems = []
-  if (todayOpening) {
-    stockItems = await getDailyStockItems(todayOpening.id)
+  let tablesExist = true
+
+  try {
+    todayOpening = await getTodayStockOpening()
+    
+    if (todayOpening) {
+      stockItems = await getDailyStockItems(todayOpening.id)
+    }
+  } catch (error) {
+    console.error('Error accessing stock tables:', error)
+    tablesExist = false
   }
 
   const formatNumber = (num: number) => {
@@ -55,7 +64,13 @@ export default async function StockManagementPage() {
             Controle de estoque por KG para abatedouro e loja de carnes
           </p>
         </div>
-        {!todayOpening && (
+        {!tablesExist && (
+          <Button disabled>
+            <AlertCircle className="w-4 h-4 mr-2" />
+            Tabelas não criadas
+          </Button>
+        )}
+        {!todayOpening && tablesExist && (
           <DailyStockOpeningModal
             isOpen={true}
             onClose={() => {}}
@@ -63,6 +78,31 @@ export default async function StockManagementPage() {
           />
         )}
       </div>
+
+      {!tablesExist && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-6 h-6 text-orange-600 mt-1" />
+              <div>
+                <h3 className="font-semibold text-orange-900 mb-2">Tabelas não criadas no Supabase</h3>
+                <p className="text-orange-800 mb-4">
+                  As tabelas do sistema de gestão de estoque ainda não foram criadas no banco de dados.
+                  Execute as migrations SQL na seguinte ordem:
+                </p>
+                <ol className="list-decimal list-inside space-y-2 text-orange-800">
+                  <li><code>20260515210000_create_stock_management_tables.sql</code></li>
+                  <li><code>20260515220000_create_alerts_table.sql</code></li>
+                  <li><code>20260515230000_create_users_with_roles.sql</code></li>
+                </ol>
+                <p className="text-sm text-orange-700 mt-4">
+                  Acesse o painel do Supabase → SQL Editor e execute os arquivos nesta ordem.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
