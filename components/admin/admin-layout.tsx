@@ -20,6 +20,11 @@ import {
   Gift,
   Mail,
   Calculator,
+  Scale,
+  DollarSign,
+  FileText,
+  AlertTriangle,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +40,12 @@ const sidebarLinks = [
   { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingCart },
   { href: '/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/admin/kits', label: 'Kits e Ofertas', icon: Gift },
+  { href: '/admin/estoque', label: 'Gestão de Estoque', icon: Scale },
+  { href: '/admin/custos/granja', label: 'Custos da Granja', icon: DollarSign },
+  { href: '/admin/custos/operacionais', label: 'Custos Operacionais', icon: DollarSign },
+  { href: '/admin/relatorios', label: 'Relatórios', icon: FileText },
+  { href: '/admin/alertas', label: 'Alertas', icon: AlertTriangle },
+  { href: '/admin/usuarios', label: 'Usuários', icon: Shield },
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
   { href: '/admin/depoimentos', label: 'Depoimentos', icon: MessageSquare },
   { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
