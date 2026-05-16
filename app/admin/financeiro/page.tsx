@@ -1,16 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getFinancialSummary, calculateRealProfit } from '@/lib/actions/stock'
+import { getFinancialSummary, calculateRealProfit, getOperationalCosts, getOperationalCostCategories } from '@/lib/actions/stock'
 import { DollarSign, TrendingUp, TrendingDown, Calendar, BarChart3, PieChart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts'
 
 export default function FinancialDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('today')
   const [summary, setSummary] = useState<any>(null)
+  const [costs, setCosts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchData() {
@@ -39,10 +42,17 @@ export default function FinancialDashboardPage() {
             endDate = startDate
         }
 
-        const data = await getFinancialSummary(startDate, endDate)
-        setSummary(data)
+        const [summaryData, costsData, categoriesData] = await Promise.all([
+          getFinancialSummary(startDate, endDate),
+          getOperationalCosts(startDate, endDate),
+          getOperationalCostCategories()
+        ])
+
+        setSummary(summaryData)
+        setCosts(costsData || [])
+        setCategories(categoriesData || [])
       } catch (error) {
-        console.error('Error fetching financial summary:', error)
+        console.error('Error fetching financial data:', error)
       } finally {
         setLoading(false)
       }
@@ -64,6 +74,34 @@ export default function FinancialDashboardPage() {
       maximumFractionDigits: 2,
     }).format(num)
   }
+
+  // Preparar dados para gráfico de gastos por categoria
+  const costsByCategory = categories.map(cat => {
+    const categoryCosts = costs.filter(c => c.category_id === cat.id)
+    const total = categoryCosts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+    return {
+      name: cat.name,
+      value: total,
+      color: cat.color || '#3b82f6'
+    }
+  }).filter(c => c.value > 0)
+
+  // Preparar dados para gráfico de evolução de custos
+  const costsByDate = costs.reduce((acc: any, cost) => {
+    const date = cost.date
+    if (!acc[date]) acc[date] = 0
+    acc[date] += Number(cost.amount) || 0
+    return acc
+  }, {})
+
+  const costEvolutionData = Object.entries(costsByDate)
+    .map(([date, amount]) => ({
+      date: new Date(date).toLocaleDateString('pt-BR'),
+      valor: amount
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
   if (loading) {
     return (
@@ -140,6 +178,71 @@ export default function FinancialDashboardPage() {
               {formatCurrency(summary?.netProfit || 0)}
             </div>
             <p className="text-xs text-muted-foreground">Lucro real</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
+              Gastos por Categoria
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {costsByCategory.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={costsByCategory}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {costsByCategory.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Sem dados de custos por categoria
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Evolução de Custos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {costEvolutionData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={costEvolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Bar dataKey="valor" fill="#f97316" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Sem dados de evolução de custos
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
