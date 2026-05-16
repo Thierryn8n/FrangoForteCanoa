@@ -399,6 +399,102 @@ export async function processRecurringCosts() {
   }
 }
 
+export async function calculateOperationalCostPerKg(date: string): Promise<number> {
+  // Buscar custos operacionais do dia
+  const costs = await getOperationalCosts(date, date)
+  const totalCosts = costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  
+  // Buscar quantidade vendida no dia
+  const { data: dailyReport } = await supabase
+    .from('daily_reports')
+    .select('total_quantity_sold')
+    .eq('report_date', date)
+    .single()
+  
+  const quantitySold = Number(dailyReport?.total_quantity_sold) || 0
+  
+  if (quantitySold === 0) return 0
+  
+  return totalCosts / quantitySold
+}
+
+export async function calculateRealProfit(date: string): Promise<{
+  grossProfit: number
+  netProfit: number
+  operationalCostPerKg: number
+  totalOperationalCosts: number
+}> {
+  // Buscar relatório do dia
+  const { data: dailyReport } = await supabase
+    .from('daily_reports')
+    .select('*')
+    .eq('report_date', date)
+    .single()
+  
+  if (!dailyReport) {
+    return {
+      grossProfit: 0,
+      netProfit: 0,
+      operationalCostPerKg: 0,
+      totalOperationalCosts: 0
+    }
+  }
+  
+  // Buscar custos operacionais do dia
+  const costs = await getOperationalCosts(date, date)
+  const totalOperationalCosts = costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  
+  const grossProfit = Number(dailyReport.gross_profit) || 0
+  const netProfit = grossProfit - totalOperationalCosts
+  const quantitySold = Number(dailyReport.total_quantity_sold) || 0
+  const operationalCostPerKg = quantitySold > 0 ? totalOperationalCosts / quantitySold : 0
+  
+  return {
+    grossProfit,
+    netProfit,
+    operationalCostPerKg,
+    totalOperationalCosts
+  }
+}
+
+export async function getFinancialSummary(startDate: string, endDate: string): Promise<{
+  totalSales: number
+  totalCosts: number
+  totalOperationalCosts: number
+  grossProfit: number
+  netProfit: number
+  quantitySold: number
+  operationalCostPerKg: number
+}> {
+  // Buscar relatórios no período
+  const { data: reports } = await supabase
+    .from('daily_reports')
+    .select('*')
+    .gte('report_date', startDate)
+    .lte('report_date', endDate)
+  
+  // Buscar custos operacionais no período
+  const costs = await getOperationalCosts(startDate, endDate)
+  const totalOperationalCosts = costs.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  
+  const totalSales = reports?.reduce((sum, r) => sum + (Number(r.total_sales) || 0), 0) || 0
+  const totalCosts = reports?.reduce((sum, r) => sum + (Number(r.total_cost) || 0), 0) || 0
+  const grossProfit = reports?.reduce((sum, r) => sum + (Number(r.gross_profit) || 0), 0) || 0
+  const quantitySold = reports?.reduce((sum, r) => sum + (Number(r.total_quantity_sold) || 0), 0) || 0
+  const netProfit = grossProfit - totalOperationalCosts
+  const operationalCostPerKg = quantitySold > 0 ? totalOperationalCosts / quantitySold : 0
+  
+  return {
+    totalSales,
+    totalCosts,
+    totalOperationalCosts,
+    grossProfit,
+    netProfit,
+    quantitySold,
+    operationalCostPerKg
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {
