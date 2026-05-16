@@ -1,4 +1,4 @@
-import { getStockCategories } from '@/lib/actions/stock'
+import { getStockCategories, createStockCategory } from '@/lib/actions/stock'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -8,5 +8,16 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching stock categories:', error)
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const category = await request.json()
+    const newCategory = await createStockCategory(category)
+    return NextResponse.json(newCategory)
+  } catch (error) {
+    console.error('Error creating stock category:', error)
+    return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
   }
 }
