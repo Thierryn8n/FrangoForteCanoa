@@ -589,6 +589,107 @@ export async function getAlertsSummary() {
   }
 }
 
+// === CÁLCULO DE PREÇO IDEAL DO FRANGO ===
+
+export async function calculateIdealChickenPrice(desiredProfitMargin: number, estimatedMonthlySales: number) {
+  // Buscar preço atual do frango da granja
+  const { data: farmPrice } = await supabase
+    .from('farm_price_history')
+    .select('price_per_kg')
+    .order('effective_date', { ascending: false })
+    .limit(1)
+    .single()
+  
+  const farmCostPerKg = Number(farmPrice?.price_per_kg) || 0
+  
+  // Buscar custos operacionais do mês atual
+  const today = new Date()
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+  
+  const operationalCosts = await getOperationalCosts(monthStart, monthEnd)
+  const totalOperationalCosts = operationalCosts.reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+  
+  // Calcular custo operacional por KG estimado
+  const operationalCostPerKg = estimatedMonthlySales > 0 ? totalOperationalCosts / estimatedMonthlySales : 0
+  
+  // Custo total por KG = custo da granja + custo operacional
+  const totalCostPerKg = farmCostPerKg + operationalCostPerKg
+  
+  // Preço de venda ideal = custo total / (1 - margem de lucro)
+  // Exemplo: custo = 10, margem = 20% (0.20)
+  // preço = 10 / (1 - 0.20) = 10 / 0.80 = 12.50
+  const idealPricePerKg = totalCostPerKg / (1 - desiredProfitMargin)
+  
+  // Calcular lucro por KG
+  const profitPerKg = idealPricePerKg - totalCostPerKg
+  
+  // Calcular lucro total mensal estimado
+  const estimatedMonthlyProfit = profitPerKg * estimatedMonthlySales
+  
+  return {
+    farmCostPerKg,
+    operationalCostPerKg,
+    totalCostPerKg,
+    idealPricePerKg,
+    profitPerKg,
+    estimatedMonthlyProfit,
+    totalOperationalCosts,
+    desiredProfitMargin: desiredProfitMargin * 100
+  }
+}
+
+export async function updateAllChickenPrices(newPricePerKg: number) {
+  // Buscar todos os produtos que são frango (baseado no nome ou categoria)
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .ilike('name', '%frango%')
+  
+  if (!products || products.length === 0) {
+    return { success: false, message: 'Nenhum produto de frango encontrado' }
+  }
+  
+  // Atualizar o preço de cada produto de frango
+  const updates = products.map(async (product) => {
+    // Calcular novo preço baseado no preço por KG
+    // Se o produto tem weight_in_kg, usa isso, senão assume 1KG
+    const weight = Number(product.weight_in_kg) || 1
+    const newPrice = newPricePerKg * weight
+    
+    const { error } = await supabase
+      .from('products')
+      .update({ 
+        price: newPrice,
+        cost_per_kg: newPricePerKg,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', product.id)
+    
+    if (error) throw error
+    
+    return { productId: product.id, oldPrice: product.price, newPrice }
+  })
+  
+  const results = await Promise.all(updates)
+  
+  return {
+    success: true,
+    message: `${results.length} produtos de frango atualizados`,
+    updatedProducts: results
+  }
+}
+
+export async function getChickenProducts() {
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .ilike('name', '%frango%')
+    .eq('is_active', true)
+  
+  return products || []
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {
