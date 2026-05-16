@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts, getWeeklyReports } from '@/lib/actions/stock'
-import { TrendingUp, TrendingDown, Package, DollarSign, AlertTriangle, ShoppingBag, Users, Clock } from 'lucide-react'
+import { getTodayStockOpening, getDailyReport, getFarmPriceHistory, getOperationalCosts, getWeeklyReports, getAlertsSummary } from '@/lib/actions/stock'
+import { TrendingUp, TrendingDown, Package, DollarSign, AlertTriangle, ShoppingBag, Users, Clock, BarChart3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -18,6 +18,7 @@ export default function AdminDashboardPage() {
   const [products, setProducts] = useState<any[]>([])
   const [weeklyReports, setWeeklyReports] = useState<any[]>([])
   const [tablesExist, setTablesExist] = useState(true)
+  const [costAlerts, setCostAlerts] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchData() {
@@ -25,14 +26,15 @@ export default function AdminDashboardPage() {
       const today = new Date().toISOString().split('T')[0]
       
       try {
-        const [opening, report, prices, costs, orders, prods, weekly] = await Promise.all([
+        const [opening, report, prices, costs, orders, prods, weekly, alertsSummary] = await Promise.all([
           getTodayStockOpening(),
           getDailyReport(today),
           getFarmPriceHistory(),
           getOperationalCosts(),
           supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(5),
           supabase.from('products').select('*').eq('is_active', true),
-          getWeeklyReports(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today)
+          getWeeklyReports(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], today),
+          getAlertsSummary()
         ])
 
         setTodayOpening(opening)
@@ -42,6 +44,7 @@ export default function AdminDashboardPage() {
         setRecentOrders(orders?.data || [])
         setProducts(prods?.data || [])
         setWeeklyReports(weekly || [])
+        setCostAlerts(alertsSummary?.alerts || [])
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
         setTablesExist(false)
@@ -310,19 +313,27 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </Link>
+            <Link href="/admin/financeiro">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="font-medium">Dashboard Financeiro</span>
+                </div>
+              </div>
+            </Link>
+            <Link href="/admin/custos/operacionais">
+              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="font-medium">Custos Operacionais</span>
+                </div>
+              </div>
+            </Link>
             <Link href="/admin/relatorios">
               <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-4 h-4" />
                   <span className="font-medium">Ver Relatórios</span>
-                </div>
-              </div>
-            </Link>
-            <Link href="/admin/custos/granja">
-              <div className="p-3 border rounded-lg hover:bg-primary/5 transition cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="w-4 h-4" />
-                  <span className="font-medium">Custos da Granja</span>
                 </div>
               </div>
             </Link>
@@ -360,6 +371,18 @@ export default function AdminDashboardPage() {
               </div>
             )}
             
+            {costAlerts && costAlerts.length > 0 && (
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="font-medium text-orange-800">{costAlerts.length} alerta(s) de custos</p>
+                    <p className="text-sm text-orange-700">Verifique os custos operacionais</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {products && products.length > 0 && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -384,7 +407,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {(!todayOpening && !products && !operationalCosts) && (
+            {(!todayOpening && !costAlerts?.length && !products && !operationalCosts) && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Nenhum alerta no momento</p>
               </div>
