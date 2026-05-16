@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getDailyReport, getWeeklyReports, generateDailyReport } from '@/lib/actions/stock'
-import { FileText, TrendingUp, DollarSign, Package, Calendar, Printer } from 'lucide-react'
+import { getDailyReport, getWeeklyReports, generateDailyReport, getFinancialSummary, getOperationalCosts } from '@/lib/actions/stock'
+import { FileText, TrendingUp, DollarSign, Package, Calendar, Printer, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -13,11 +13,14 @@ export default function ReportsPage() {
   const [dailyReport, setDailyReport] = useState<any>(null)
   const [weeklyReports, setWeeklyReports] = useState<any[]>([])
   const [printing, setPrinting] = useState(false)
+  const [dailyFinancial, setDailyFinancial] = useState<any>(null)
+  const [weeklyFinancial, setWeeklyFinancial] = useState<any>(null)
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient()
       const today = new Date().toISOString().split('T')[0]
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       
       try {
         // Gerar relatório do dia atual se não existir
@@ -28,9 +31,16 @@ export default function ReportsPage() {
         setDailyReport(report)
 
         // Buscar relatórios da última semana
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         const weekly = await getWeeklyReports(weekAgo, today)
         setWeeklyReports(weekly || [])
+
+        // Buscar dados financeiros com custos operacionais
+        const [dailyFin, weeklyFin] = await Promise.all([
+          getFinancialSummary(today, today),
+          getFinancialSummary(weekAgo, today)
+        ])
+        setDailyFinancial(dailyFin)
+        setWeeklyFinancial(weeklyFin)
       } catch (error) {
         console.error('Error fetching reports:', error)
       } finally {
@@ -64,6 +74,8 @@ export default function ReportsPage() {
     try {
       const reportData = {
         dailyReport,
+        dailyFinancial,
+        weeklyFinancial,
         weeklyTotal: weeklyReports?.reduce((sum: any, r: any) => {
           return {
             sales: sum.sales + (Number(r.total_sales) || 0),
@@ -94,17 +106,6 @@ export default function ReportsPage() {
       setPrinting(false)
     }
   }
-
-  // Calcular totais da semana
-  const weeklyTotal = weeklyReports?.reduce((sum: any, r: any) => {
-    return {
-      sales: sum.sales + (Number(r.total_sales) || 0),
-      cost: sum.cost + (Number(r.total_cost) || 0),
-      grossProfit: sum.grossProfit + (Number(r.gross_profit) || 0),
-      netProfit: sum.netProfit + (Number(r.net_profit) || 0),
-      quantity: sum.quantity + (Number(r.total_quantity_sold) || 0),
-    }
-  }, { sales: 0, cost: 0, grossProfit: 0, netProfit: 0, quantity: 0 }) || { sales: 0, cost: 0, grossProfit: 0, netProfit: 0, quantity: 0 }
 
   if (loading) {
     return (
@@ -161,24 +162,40 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           {dailyReport ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Vendas Totais</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(Number(dailyReport.total_sales))}</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Vendas Totais</p>
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(Number(dailyReport.total_sales))}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Custo de Produtos</p>
+                  <p className="text-2xl font-bold text-red-500">{formatCurrency(Number(dailyReport.total_cost))}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Custos Operacionais</p>
+                  <p className="text-2xl font-bold text-orange-500">{formatCurrency(dailyFinancial?.totalOperationalCosts || 0)}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Lucro Líquido</p>
+                  <p className={`text-2xl font-bold ${dailyFinancial?.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {formatCurrency(dailyFinancial?.netProfit || 0)}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Custo Total</p>
-                <p className="text-2xl font-bold text-red-500">{formatCurrency(Number(dailyReport.total_cost))}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Lucro Líquido</p>
-                <p className={`text-2xl font-bold ${Number(dailyReport.net_profit) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatCurrency(Number(dailyReport.net_profit))}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Quantidade Vendida</p>
-                <p className="text-2xl font-bold">{formatNumber(Number(dailyReport.total_quantity_sold))} KG</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Lucro Bruto</p>
+                  <p className="text-xl font-bold">{formatCurrency(dailyFinancial?.grossProfit || 0)}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Quantidade Vendida</p>
+                  <p className="text-xl font-bold">{formatNumber(dailyFinancial?.quantitySold || 0)} KG</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Custo Operacional/KG</p>
+                  <p className="text-xl font-bold">{formatCurrency(dailyFinancial?.operationalCostPerKg || 0)}/KG</p>
+                </div>
               </div>
             </div>
           ) : (
@@ -193,24 +210,40 @@ export default function ReportsPage() {
           <CardTitle>Resumo da Última Semana</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Vendas Totais</p>
-              <p className="text-2xl font-bold text-primary">{formatCurrency(weeklyTotal.sales)}</p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Vendas Totais</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(weeklyFinancial?.totalSales || 0)}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Custo de Produtos</p>
+                <p className="text-2xl font-bold text-red-500">{formatCurrency(weeklyFinancial?.totalCosts || 0)}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Custos Operacionais</p>
+                <p className="text-2xl font-bold text-orange-500">{formatCurrency(weeklyFinancial?.totalOperationalCosts || 0)}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Lucro Líquido</p>
+                <p className={`text-2xl font-bold ${weeklyFinancial?.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatCurrency(weeklyFinancial?.netProfit || 0)}
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Custo Total</p>
-              <p className="text-2xl font-bold text-red-500">{formatCurrency(weeklyTotal.cost)}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Lucro Líquido</p>
-              <p className={`text-2xl font-bold ${weeklyTotal.netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {formatCurrency(weeklyTotal.netProfit)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Quantidade Vendida</p>
-              <p className="text-2xl font-bold">{formatNumber(weeklyTotal.quantity)} KG</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Lucro Bruto</p>
+                <p className="text-xl font-bold">{formatCurrency(weeklyFinancial?.grossProfit || 0)}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Quantidade Vendida</p>
+                <p className="text-xl font-bold">{formatNumber(weeklyFinancial?.quantitySold || 0)} KG</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Custo Operacional/KG</p>
+                <p className="text-xl font-bold">{formatCurrency(weeklyFinancial?.operationalCostPerKg || 0)}/KG</p>
+              </div>
             </div>
           </div>
         </CardContent>
