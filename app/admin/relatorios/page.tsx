@@ -1,23 +1,45 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { getDailyReport, getWeeklyReports, generateDailyReport } from '@/lib/actions/stock'
-import { FileText, TrendingUp, DollarSign, Package, Calendar } from 'lucide-react'
+import { FileText, TrendingUp, DollarSign, Package, Calendar, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
-export default async function ReportsPage() {
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
-  
-  // Gerar relatório do dia atual se não existir
-  let dailyReport = await getDailyReport(today)
-  if (!dailyReport) {
-    dailyReport = await generateDailyReport(today)
-  }
+export default function ReportsPage() {
+  const [loading, setLoading] = useState(true)
+  const [dailyReport, setDailyReport] = useState<any>(null)
+  const [weeklyReports, setWeeklyReports] = useState<any[]>([])
+  const [printing, setPrinting] = useState(false)
 
-  // Buscar relatórios da última semana
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  const weeklyReports = await getWeeklyReports(weekAgo, today)
+  useEffect(() => {
+    async function fetchData() {
+      const supabase = createClient()
+      const today = new Date().toISOString().split('T')[0]
+      
+      try {
+        // Gerar relatório do dia atual se não existir
+        let report = await getDailyReport(today)
+        if (!report) {
+          report = await generateDailyReport(today)
+        }
+        setDailyReport(report)
+
+        // Buscar relatórios da última semana
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const weekly = await getWeeklyReports(weekAgo, today)
+        setWeeklyReports(weekly || [])
+      } catch (error) {
+        console.error('Error fetching reports:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const formatCurrency = (num: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -37,6 +59,42 @@ export default async function ReportsPage() {
     return new Intl.DateTimeFormat('pt-BR').format(new Date(date))
   }
 
+  const handlePrintReport = async (type: 'diario' | 'semanal') => {
+    setPrinting(true)
+    try {
+      const reportData = {
+        dailyReport,
+        weeklyTotal: weeklyReports?.reduce((sum: any, r: any) => {
+          return {
+            sales: sum.sales + (Number(r.total_sales) || 0),
+            cost: sum.cost + (Number(r.total_cost) || 0),
+            grossProfit: sum.grossProfit + (Number(r.gross_profit) || 0),
+            netProfit: sum.netProfit + (Number(r.net_profit) || 0),
+            quantity: sum.quantity + (Number(r.total_quantity_sold) || 0),
+          }
+        }, { sales: 0, cost: 0, grossProfit: 0, netProfit: 0, quantity: 0 })
+      }
+
+      const response = await fetch('/api/print/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportData, reportType: type })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert('Relatório enviado para impressão na Epson!')
+      } else {
+        alert('Erro ao enviar relatório para impressão')
+      }
+    } catch (error) {
+      console.error('Error printing report:', error)
+      alert('Erro ao enviar relatório para impressão')
+    } finally {
+      setPrinting(false)
+    }
+  }
+
   // Calcular totais da semana
   const weeklyTotal = weeklyReports?.reduce((sum: any, r: any) => {
     return {
@@ -47,6 +105,14 @@ export default async function ReportsPage() {
       quantity: sum.quantity + (Number(r.total_quantity_sold) || 0),
     }
   }, { sales: 0, cost: 0, grossProfit: 0, netProfit: 0, quantity: 0 }) || { sales: 0, cost: 0, grossProfit: 0, netProfit: 0, quantity: 0 }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Carregando...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -59,6 +125,14 @@ export default async function ReportsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => handlePrintReport('diario')} disabled={printing}>
+            <Printer className="w-4 h-4 mr-2" />
+            {printing ? 'Imprimindo...' : 'Imprimir Relatório Diário'}
+          </Button>
+          <Button onClick={() => handlePrintReport('semanal')} disabled={printing} variant="outline">
+            <Printer className="w-4 h-4 mr-2" />
+            {printing ? 'Imprimindo...' : 'Imprimir Relatório Semanal'}
+          </Button>
           <Link href="/admin/relatorios/diario">
             <Button variant="outline">
               <Calendar className="w-4 h-4 mr-2" />
