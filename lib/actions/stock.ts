@@ -142,12 +142,20 @@ export async function createStockTransaction(transaction: {
     ? -transaction.quantity 
     : transaction.quantity
 
-  await supabase
+  // Buscar o item atual primeiro
+  const { data: currentItem } = await supabase
     .from('daily_stock_items')
-    .update({
-      current_quantity: supabase.raw(`current_quantity + ${quantityChange}`)
-    })
+    .select('current_quantity')
     .eq('id', transaction.stock_item_id)
+    .single()
+
+  if (currentItem) {
+    const newQuantity = Number(currentItem.current_quantity) + quantityChange
+    await supabase
+      .from('daily_stock_items')
+      .update({ current_quantity: newQuantity })
+      .eq('id', transaction.stock_item_id)
+  }
 
   return data
 }
@@ -158,6 +166,78 @@ export async function getStockTransactions(openingId: string) {
     .select('*')
     .eq('opening_id', openingId)
     .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+// === HISTÓRICO DE PREÇOS DA GRANJA ===
+
+export async function getFarmPriceHistory(category?: string) {
+  let query = supabase
+    .from('farm_price_history')
+    .select('*')
+    .order('effective_date', { ascending: false })
+
+  if (category) {
+    query = query.eq('product_category', category)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function createFarmPriceRecord(record: {
+  product_category: string
+  price_per_kg: number
+  price_change_type: 'increase' | 'decrease' | 'stable'
+  previous_price?: number
+  effective_date: string
+  notes?: string
+}) {
+  const { data, error } = await supabase
+    .from('farm_price_history')
+    .insert([record])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// === CUSTOS OPERACIONAIS ===
+
+export async function getOperationalCosts(startDate?: string, endDate?: string) {
+  let query = supabase
+    .from('operational_costs')
+    .select('*')
+    .order('date', { ascending: false })
+
+  if (startDate) {
+    query = query.gte('date', startDate)
+  }
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function createOperationalCost(cost: {
+  cost_type: 'labor' | 'transport' | 'slaughter' | 'energy' | 'packaging' | 'other'
+  description: string
+  amount: number
+  date: string
+  notes?: string
+}) {
+  const { data, error } = await supabase
+    .from('operational_costs')
+    .insert([cost])
+    .select()
+    .single()
 
   if (error) throw error
   return data
