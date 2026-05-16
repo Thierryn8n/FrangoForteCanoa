@@ -1,0 +1,204 @@
+Sistema de Gestão de Estoque, Produção e Vendas para Abatedouro e Loja de Carnes
+
+O sistema deve funcionar de forma totalmente diferente de um estoque comum de supermercado, pois o controle principal não será feito por unidade de produto, mas sim por peso em quilogramas (KG).
+
+Funcionamento do Estoque
+
+Todos os dias a empresa leva uma quantidade específica de produtos para venda na loja, principalmente frango, carne suína e outros itens.
+
+Exemplo:
+
+40 KG de frango
+60 KG de carne
+30 caixas de ovos
+
+Os clientes não compram “1 frango” como unidade fixa. Eles compram por peso, ou seja:
+
+1,5 KG
+2 KG
+700 gramas
+3,2 KG
+
+Por isso, o sistema precisa trabalhar com:
+
+Controle por KG
+Controle de peso vendido
+Controle de estoque restante
+Controle financeiro por peso
+Painel Inteligente de Estoque Diário
+
+Quero que exista um painel administrativo completo para gerenciamento diário do estoque.
+
+Abertura diária da loja
+
+Todos os dias às 07:00 da manhã, quando o administrador abrir o sistema, deve aparecer automaticamente um POP-UP informando:
+
+Estoque disponível do dia:
+Quantos KG de frango estarão disponíveis
+Quantos KG de carne bovina
+Quantos KG de carne suína
+Quantas caixas de ovos
+Outros produtos cadastrados
+
+Exemplo:
+
+Estoque de Hoje
+Frango: 40 KG
+Carne Suína: 25 KG
+Carne Bovina: 18 KG
+Ovos: 30 caixas
+Cadastro Dinâmico de Categorias
+
+O sistema deve permitir criar categorias personalizadas.
+
+Exemplos:
+
+Frango
+Carne Suína
+Carne Bovina
+Ovos
+Linguiça
+Miúdos
+Produtos congelados
+
+Cada categoria poderá trabalhar de forma diferente:
+
+Produtos por KG
+Produtos por unidade
+Produtos por caixa
+Produtos por pacote
+Controle Automático de Saída
+
+Tudo que for vendido deve ser automaticamente subtraído do estoque do dia.
+
+Exemplo:
+
+Estoque inicial: 40 KG de frango
+Venda realizada: 3,5 KG
+Estoque restante: 36,5 KG
+
+O sistema precisa atualizar em tempo real:
+
+Quantidade vendida
+Quantidade restante
+Valor vendido
+Lucro estimado
+Custo operacional
+Controle de Custos do Frango da Granja
+
+O sistema também deve possuir um painel financeiro específico para controle do custo do frango vindo da granja.
+
+Funcionamento do preço do frango
+
+A empresa compra o frango vivo diretamente da granja.
+
+O valor do frango varia constantemente, normalmente em ciclos de aproximadamente 45 dias.
+
+Exemplo:
+
+Em alguns períodos o valor sobe R$1,00 por KG
+Em outros períodos o valor diminui
+Isso acontece conforme a quantidade de frangos disponíveis e o tempo de crescimento
+
+O sistema precisa permitir:
+
+Registrar o valor atual do KG do frango
+Registrar datas de aumento
+Registrar datas de redução
+Histórico completo de preços
+Comparação entre períodos
+Gestão de Produção e Lucro
+
+O sistema deve calcular automaticamente:
+
+Custos:
+Valor pago na granja
+Custos operacionais
+Custos de mão de obra
+Transporte
+Abate
+Energia
+Embalagem
+Receitas:
+Total vendido no dia
+Total vendido na semana
+Total vendido no mês
+Lucros:
+Lucro bruto
+Lucro líquido
+Margem de lucro por KG
+Produto mais lucrativo
+Relatórios Inteligentes
+
+Quero relatórios automáticos e bem organizados.
+
+Relatórios diários
+Quantidade vendida
+Quantidade restante
+Valor vendido
+Lucro do dia
+Relatórios semanais
+Evolução das vendas
+Produtos mais vendidos
+Comparação entre dias
+Relatórios mensais
+Faturamento total
+Custos totais
+Lucro líquido
+Histórico de preços da granja
+Crescimento ou queda nas vendas
+Dashboard Administrativo Moderno
+
+O painel administrativo deve ser moderno, bonito e intuitivo.
+
+O dashboard deve mostrar:
+Gráficos de vendas
+Gráficos de lucro
+Estoque em tempo real
+Produtos acabando
+Alertas automáticos
+Comparação de desempenho
+Histórico completo
+Funções Extras Importantes
+Alertas automáticos
+
+O sistema deve avisar:
+
+Quando o estoque estiver baixo
+Quando faltar produto
+Quando o preço da granja mudar
+Quando houver prejuízo
+Histórico completo
+
+Tudo deve ficar salvo:
+
+Quem vendeu
+Quanto vendeu
+Horário
+Produto
+Peso
+Valor
+Controle de usuários
+
+O sistema deve possuir:
+
+Administrador
+Funcionários
+Caixa
+Gerente
+
+Cada usuário terá permissões diferentes.
+
+Objetivo Principal do Sistema
+
+O principal objetivo do sistema é permitir controle total de tudo que entra e tudo que sai da loja, incluindo:
+
+Estoque
+Produção
+Custos
+Lucros
+Prejuízos
+Histórico financeiro
+Controle operacional
+
+Tudo isso de forma automatizada, organizada e visualmente profissional.
