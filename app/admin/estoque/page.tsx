@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { DailyStockOpeningModal } from '@/components/admin/daily-stock-opening-modal'
 import { getTodayStockOpening, getDailyStockItems } from '@/lib/actions/stock'
-import { Package, Scale, TrendingUp, AlertCircle } from 'lucide-react'
+import { Package, Scale, TrendingUp, AlertCircle, Plus, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 
 export default function StockManagementPage() {
   const [loading, setLoading] = useState(true)
@@ -183,21 +184,36 @@ export default function StockManagementPage() {
 
       {/* Stock Items List */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Itens de Estoque do Dia</CardTitle>
+          {todayOpening && (
+            <Link href="/admin/estoque/categorias">
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Gerenciar Categorias
+              </Button>
+            </Link>
+          )}
         </CardHeader>
         <CardContent>
           {!todayOpening ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">Estoque do dia ainda não foi aberto</p>
-              <Button onClick={() => {}}>
+              <Button onClick={() => setShowModal(true)}>
                 Abrir Estoque do Dia
               </Button>
             </div>
           ) : stockItems.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Nenhum item de estoque cadastrado</p>
+              <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">Nenhum item de estoque cadastrado</p>
+              <Link href="/admin/estoque/categorias">
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Gerenciar Categorias
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-4">
@@ -221,9 +237,13 @@ export default function StockManagementPage() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">{formatNumber(Number(item.current_quantity))} {item.unit}</p>
-                        <p className="text-sm text-muted-foreground">Restante</p>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
 
