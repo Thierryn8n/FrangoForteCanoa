@@ -341,3 +341,116 @@ export async function getMonthlyReports(year: number, month: number) {
   if (error) throw error
   return data
 }
+
+// === ALERTAS AUTOMÁTICOS ===
+
+export async function createAlert(alert: {
+  alert_type: 'low_stock' | 'out_of_stock' | 'price_change' | 'loss' | 'warning'
+  title: string
+  message: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  metadata?: any
+}) {
+  const { data, error } = await supabase
+    .from('alerts')
+    .insert([alert])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getAlerts(unreadOnly: boolean = false) {
+  let query = supabase
+    .from('alerts')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (unreadOnly) {
+    query = query.eq('is_read', false)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
+
+export async function markAlertAsRead(alertId: string) {
+  const { error } = await supabase
+    .from('alerts')
+    .update({ is_read: true })
+    .eq('id', alertId)
+
+  if (error) throw error
+}
+
+export async function resolveAlert(alertId: string) {
+  const { error } = await supabase
+    .from('alerts')
+    .update({ 
+      is_resolved: true,
+      resolved_at: new Date().toISOString()
+    })
+    .eq('id', alertId)
+
+  if (error) throw error
+}
+
+export async function checkLowStockAlerts() {
+  const today = new Date().toISOString().split('T')[0]
+  const { data: opening } = await supabase
+    .from('daily_stock_opening')
+    .select('*')
+    .eq('opening_date', today)
+    .single()
+
+  if (!opening) return
+
+  const { data: stockItems } = await supabase
+    .from('daily_stock_items')
+    .select('*, stock_categories(name)')
+    .eq('opening_id', opening.id)
+
+  if (!stockItems) return
+
+  // Verificar estoque baixo (menos de 20% do inicial)
+  stockItems.forEach((item: any) => {
+    const initialQuantity = Number(item.initial_quantity)
+    const currentQuantity = Number(item.current_quantity)
+    const percentage = initialQuantity > 0 ? (currentQuantity / initialQuantity) * 100 : 0
+
+    if (percentage < 20 && percentage > 0) {
+      createAlert({
+        alert_type: 'low_stock',
+        title: `Estoque baixo: ${item.stock_categories?.name}`,
+        message: `O estoque de ${item.stock_categories?.name} está com apenas ${percentage.toFixed(1)}% do inicial (${currentQuantity.toFixed(2)} KG de ${initialQuantity.toFixed(2)} KG)`,
+        severity: 'medium',
+        metadata: { stock_item_id: item.id, percentage }
+      })
+    } else if (percentage === 0) {
+      createAlert({
+        alert_type: 'out_of_stock',
+        title: `Produto esgotado: ${item.stock_categories?.name}`,
+        message: `O estoque de ${item.stock_categories?.name} está esgotado`,
+        severity: 'critical',
+        metadata: { stock_item_id: item.id }
+      })
+    }
+  })
+}
+
+export async function checkLossAlerts() {
+  const today = new Date().toISOString().split('T')[0]
+  const { data: report } = await getDailyReport(today)
+
+  if (report && Number(report.net_profit) < 0) {
+    createAlert({
+      alert_type: 'loss',
+      title: 'Prejuízo detectado',
+      message: `O lucro líquido de hoje está negativo: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(report.net_profit))}`,
+      severity: 'high',
+      metadata: { report_id: report.id, net_profit: report.net_profit }
+    })
+  }
+}
