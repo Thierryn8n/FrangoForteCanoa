@@ -151,6 +151,9 @@ CREATE POLICY "Stock categories can be updated by authenticated users"
 CREATE POLICY "Stock categories can be deleted by authenticated users" 
   ON stock_categories FOR DELETE USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Service role can bypass RLS for stock_categories" 
+  ON stock_categories FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
 -- Políticas para daily_stock_opening
 CREATE POLICY "Daily stock opening is viewable by authenticated users" 
   ON daily_stock_opening FOR SELECT USING (auth.role() = 'authenticated');
@@ -160,6 +163,9 @@ CREATE POLICY "Daily stock opening can be created by authenticated users"
 
 CREATE POLICY "Daily stock opening can be updated by authenticated users" 
   ON daily_stock_opening FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Service role can bypass RLS for daily_stock_opening" 
+  ON daily_stock_opening FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- Políticas para daily_stock_items
 CREATE POLICY "Daily stock items are viewable by authenticated users" 
@@ -171,12 +177,18 @@ CREATE POLICY "Daily stock items can be created by authenticated users"
 CREATE POLICY "Daily stock items can be updated by authenticated users" 
   ON daily_stock_items FOR UPDATE USING (auth.role() = 'authenticated');
 
+CREATE POLICY "Service role can bypass RLS for daily_stock_items" 
+  ON daily_stock_items FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
 -- Políticas para stock_transactions
 CREATE POLICY "Stock transactions are viewable by authenticated users" 
   ON stock_transactions FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Stock transactions can be created by authenticated users" 
   ON stock_transactions FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Service role can bypass RLS for stock_transactions" 
+  ON stock_transactions FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- Políticas para farm_price_history
 CREATE POLICY "Farm price history is viewable by authenticated users" 
@@ -185,12 +197,18 @@ CREATE POLICY "Farm price history is viewable by authenticated users"
 CREATE POLICY "Farm price history can be created by authenticated users" 
   ON farm_price_history FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+CREATE POLICY "Service role can bypass RLS for farm_price_history" 
+  ON farm_price_history FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
+
 -- Políticas para operational_costs
 CREATE POLICY "Operational costs are viewable by authenticated users" 
   ON operational_costs FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Operational costs can be created by authenticated users" 
   ON operational_costs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Service role can bypass RLS for operational_costs" 
+  ON operational_costs FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- Políticas para daily_reports
 CREATE POLICY "Daily reports are viewable by authenticated users" 
@@ -201,6 +219,9 @@ CREATE POLICY "Daily reports can be created by authenticated users"
 
 CREATE POLICY "Daily reports can be updated by authenticated users" 
   ON daily_reports FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Service role can bypass RLS for daily_reports" 
+  ON daily_reports FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- Inserir categorias padrão
 INSERT INTO stock_categories (name, slug, unit_type, description) VALUES
