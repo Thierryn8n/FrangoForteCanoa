@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getFinancialSummary, calculateRealProfit, getOperationalCosts, getOperationalCostCategories } from '@/lib/actions/stock'
+import { getFinancialSummary, calculateRealProfit, getOperationalCosts, getOperationalCostCategories, getCostsPerKgSold } from '@/lib/actions/stock'
 import { DollarSign, TrendingUp, TrendingDown, Calendar, BarChart3, PieChart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,7 @@ export default function FinancialDashboardPage() {
   const [summary, setSummary] = useState<any>(null)
   const [costs, setCosts] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
+  const [costsPerKg, setCostsPerKg] = useState<any>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -42,15 +43,17 @@ export default function FinancialDashboardPage() {
             endDate = startDate
         }
 
-        const [summaryData, costsData, categoriesData] = await Promise.all([
+        const [summaryData, costsData, categoriesData, costsPerKgData] = await Promise.all([
           getFinancialSummary(startDate, endDate),
           getOperationalCosts(startDate, endDate),
-          getOperationalCostCategories()
+          getOperationalCostCategories(),
+          getCostsPerKgSold(startDate, endDate)
         ])
 
         setSummary(summaryData)
         setCosts(costsData || [])
         setCategories(categoriesData || [])
+        setCostsPerKg(costsPerKgData)
       } catch (error) {
         console.error('Error fetching financial data:', error)
       } finally {
@@ -159,17 +162,6 @@ export default function FinancialDashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Custos Operacionais</CardTitle>
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{formatCurrency(summary?.totalOperationalCosts || 0)}</div>
-            <p className="text-xs text-muted-foreground">Despesas operacionais</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
             <TrendingUp className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
@@ -177,10 +169,82 @@ export default function FinancialDashboardPage() {
             <div className={`text-2xl font-bold ${(summary?.netProfit || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               {formatCurrency(summary?.netProfit || 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Lucro real</p>
+            <p className="text-xs text-muted-foreground">Após custos operacionais</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Custos Operacionais</CardTitle>
+            <TrendingDown className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(summary?.totalOperationalCosts || 0)}</div>
+            <p className="text-xs text-muted-foreground">Total do período</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Margem de Lucro</CardTitle>
+            <BarChart3 className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary?.profitMargin?.toFixed(1) || 0}%</div>
+            <p className="text-xs text-muted-foreground">Sobre vendas</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Costs per KG Sold */}
+      {costsPerKg && costsPerKg.totalKgSold > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-blue-900">Custos por KG de Frango Vendido</CardTitle>
+            <p className="text-sm text-blue-700">
+              Baseado em {costsPerKg.totalKgSold.toFixed(2)} KG vendidos no período selecionado
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Custo Total por KG</p>
+                  <p className="text-3xl font-bold text-blue-600">{formatCurrency(costsPerKg.totalCostPerKg)}/KG</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Total de Custos Operacionais</p>
+                  <p className="text-3xl font-bold">{formatCurrency(costsPerKg.totalCosts)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="font-medium text-blue-900">Custos por Categoria:</p>
+                {Object.entries(costsPerKg.costsByCategory).map(([category, data]: [string, any]) => (
+                  <div key={category} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: data.color }}
+                      >
+                        <DollarSign className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{category}</p>
+                        <p className="text-sm text-muted-foreground">Total: {formatCurrency(data.total)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-blue-600">{formatCurrency(data.ratePerKg)}/KG</p>
+                      <p className="text-xs text-muted-foreground">por KG vendido</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

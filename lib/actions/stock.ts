@@ -729,6 +729,56 @@ export async function getChickenProducts() {
   return products || []
 }
 
+// === CÁLCULO DE CUSTOS POR KG VENDIDO ===
+
+export async function getCostsPerKgSold(startDate: string, endDate: string) {
+  // Buscar custos operacionais do período
+  const operationalCosts = await getOperationalCosts(startDate, endDate)
+  
+  // Buscar vendas de frango do período (KG vendidos)
+  const { data: sales } = await supabase
+    .from('stock_transactions')
+    .select('quantity')
+    .eq('transaction_type', 'sale')
+    .gte('created_at', startDate)
+    .lte('created_at', endDate)
+  
+  const totalKgSold = sales?.reduce((sum, sale) => sum + (Number(sale.quantity) || 0), 0) || 0
+  
+  // Agrupar custos por categoria
+  const costsByCategory = operationalCosts.reduce((acc: any, cost: any) => {
+    const category = cost.operational_cost_categories?.name || 'Outros'
+    if (!acc[category]) {
+      acc[category] = {
+        total: 0,
+        ratePerKg: 0,
+        color: cost.operational_cost_categories?.color || '#3b82f6',
+        icon: cost.operational_cost_categories?.icon || 'dollar-sign'
+      }
+    }
+    acc[category].total += Number(cost.amount) || 0
+    return acc
+  }, {})
+  
+  // Calcular custo por KG para cada categoria
+  Object.keys(costsByCategory).forEach(category => {
+    if (totalKgSold > 0) {
+      costsByCategory[category].ratePerKg = costsByCategory[category].total / totalKgSold
+    }
+  })
+  
+  // Calcular custo total por KG
+  const totalCosts = operationalCosts.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  const totalCostPerKg = totalKgSold > 0 ? totalCosts / totalKgSold : 0
+  
+  return {
+    totalKgSold,
+    totalCosts,
+    totalCostPerKg,
+    costsByCategory
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {

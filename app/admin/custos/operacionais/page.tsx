@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getOperationalCosts, createOperationalCost, getOperationalCostCategories, updateOperationalCost, deleteOperationalCost } from '@/lib/actions/stock'
+import { getOperationalCosts, createOperationalCost, getOperationalCostCategories, updateOperationalCost, deleteOperationalCost, getCostsPerKgSold } from '@/lib/actions/stock'
 import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Clock, AlertCircle, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +19,7 @@ export default function OperationalCostsPage() {
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCost, setEditingCost] = useState<any>(null)
+  const [costsPerKg, setCostsPerKg] = useState<any>(null)
   const [formData, setFormData] = useState({
     cost_type: 'other',
     description: '',
@@ -46,6 +47,13 @@ export default function OperationalCostsPage() {
         ])
         setCosts(costsData || [])
         setCategories(categoriesData || [])
+        
+        // Buscar custos por KG vendido do mês atual
+        const today = new Date()
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+        const costsPerKgData = await getCostsPerKgSold(monthStart, monthEnd)
+        setCostsPerKg(costsPerKgData)
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -313,6 +321,63 @@ export default function OperationalCostsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Costs per KG Sold */}
+      {costsPerKg && costsPerKg.totalKgSold > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-blue-900">Custos por KG de Frango Vendido</CardTitle>
+            <p className="text-sm text-blue-700">
+              Baseado em {costsPerKg.totalKgSold.toFixed(2)} KG vendidos no mês atual
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Custo Total por KG</p>
+                  <p className="text-3xl font-bold text-blue-600">{formatCurrency(costsPerKg.totalCostPerKg)}/KG</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Total de Custos Operacionais</p>
+                  <p className="text-3xl font-bold">{formatCurrency(costsPerKg.totalCosts)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="font-medium text-blue-900">Custos por Categoria:</p>
+                {Object.entries(costsPerKg.costsByCategory).map(([category, data]: [string, any]) => (
+                  <div key={category} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: data.color }}
+                      >
+                        <DollarSign className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{category}</p>
+                        <p className="text-sm text-muted-foreground">Total: {formatCurrency(data.total)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-blue-600">{formatCurrency(data.ratePerKg)}/KG</p>
+                      <p className="text-xs text-muted-foreground">por KG vendido</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
+                <p className="text-sm text-blue-800">
+                  <strong>Exemplo prático:</strong> Se você vende o frango a R$ 16,00/KG e o custo operacional total é {formatCurrency(costsPerKg.totalCostPerKg)}/KG, 
+                  então o lucro líquido por KG (sem contar o custo do frango da granja) é {formatCurrency(16 - costsPerKg.totalCostPerKg)}/KG.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Costs List */}
       <Card>
