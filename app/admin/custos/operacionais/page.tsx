@@ -20,6 +20,8 @@ export default function OperationalCostsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCost, setEditingCost] = useState<any>(null)
   const [costsPerKg, setCostsPerKg] = useState<any>(null)
+  const [simulationDailyKg, setSimulationDailyKg] = useState<number>(50)
+  const [simulationDays, setSimulationDays] = useState<number>(30)
   const [formData, setFormData] = useState({
     cost_type: 'other',
     description: '',
@@ -378,6 +380,128 @@ export default function OperationalCostsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Sales Simulation */}
+      <Card className="border-green-200 bg-green-50">
+        <CardHeader>
+          <CardTitle className="text-green-900">Simulador de Vendas Diárias</CardTitle>
+          <p className="text-sm text-green-700">
+            Simule diferentes cenários de vendas para calcular custos por KG projetados
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="simulation-daily-kg">Vendas Diárias (KG)</Label>
+                <Input
+                  id="simulation-daily-kg"
+                  type="number"
+                  value={simulationDailyKg}
+                  onChange={(e) => setSimulationDailyKg(Number(e.target.value))}
+                  min="1"
+                  step="5"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Quantidade de KG vendidos por dia</p>
+              </div>
+              <div>
+                <Label htmlFor="simulation-days">Período (dias)</Label>
+                <Input
+                  id="simulation-days"
+                  type="number"
+                  value={simulationDays}
+                  onChange={(e) => setSimulationDays(Number(e.target.value))}
+                  min="1"
+                  step="1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Número de dias do período</p>
+              </div>
+            </div>
+
+            {costsPerKg && (
+              <>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Total de KG Projetado</p>
+                  <p className="text-3xl font-bold text-green-600">{(simulationDailyKg * simulationDays).toFixed(2)} KG</p>
+                  <p className="text-xs text-muted-foreground">{simulationDailyKg} KG/dia × {simulationDays} dias</p>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="font-medium text-green-900">Custos por KG Projetados:</p>
+                  
+                  <div className="p-4 bg-white rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Custo Total por KG Projetado</p>
+                        <p className="text-sm text-muted-foreground">Baseado em custos operacionais do mês atual</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-green-600">
+                          {formatCurrency(costsPerKg.totalCosts / (simulationDailyKg * simulationDays))}/KG
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {Object.entries(costsPerKg.costsByCategory).map(([category, data]: [string, any]) => (
+                    <div key={category} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: data.color }}
+                        >
+                          <DollarSign className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{category}</p>
+                          <p className="text-sm text-muted-foreground">Total: {formatCurrency(data.total)}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-green-600">
+                          {formatCurrency(data.total / (simulationDailyKg * simulationDays))}/KG
+                        </p>
+                        <p className="text-xs text-muted-foreground">por KG projetado</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-3 bg-green-100 rounded-lg border border-green-300">
+                  <p className="text-sm text-green-800">
+                    <strong>Comparação:</strong> Custo real por KG: {formatCurrency(costsPerKg.totalCostPerKg)}/KG | 
+                    Custo projetado por KG: {formatCurrency(costsPerKg.totalCosts / (simulationDailyKg * simulationDays))}/KG
+                  </p>
+                  <p className="text-sm text-green-800 mt-2">
+                    {costsPerKg.totalCosts / (simulationDailyKg * simulationDays) < costsPerKg.totalCostPerKg 
+                      ? `✓ Aumentando as vendas para ${simulationDailyKg} KG/dia, você reduz o custo por KG em ${formatCurrency(costsPerKg.totalCostPerKg - (costsPerKg.totalCosts / (simulationDailyKg * simulationDays)))}`
+                      : `⚠ Com ${simulationDailyKg} KG/dia, o custo por KG aumenta em ${formatCurrency((costsPerKg.totalCosts / (simulationDailyKg * simulationDays)) - costsPerKg.totalCostPerKg)}`
+                    }
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-3 bg-white rounded-lg border text-center">
+                    <p className="text-xs text-muted-foreground">Cenário Conservador</p>
+                    <p className="text-lg font-bold">20 KG/dia</p>
+                    <p className="text-sm text-green-600">{formatCurrency(costsPerKg.totalCosts / (20 * simulationDays))}/KG</p>
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border text-center">
+                    <p className="text-xs text-muted-foreground">Cenário Atual</p>
+                    <p className="text-lg font-bold">{(costsPerKg.totalKgSold / 30).toFixed(1)} KG/dia</p>
+                    <p className="text-sm text-blue-600">{formatCurrency(costsPerKg.totalCostPerKg)}/KG</p>
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border text-center">
+                    <p className="text-xs text-muted-foreground">Cenário Otimista</p>
+                    <p className="text-lg font-bold">100 KG/dia</p>
+                    <p className="text-sm text-green-600">{formatCurrency(costsPerKg.totalCosts / (100 * simulationDays))}/KG</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Costs List */}
       <Card>
