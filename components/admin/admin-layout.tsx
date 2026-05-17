@@ -25,6 +25,7 @@ import {
   FileText,
   AlertTriangle,
   Shield,
+  BarChart3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
