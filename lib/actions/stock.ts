@@ -805,6 +805,300 @@ export async function getCostsPerKgSold(startDate: string, endDate: string) {
   }
 }
 
+// === NOTAS FISCAIS DE ENTRADA DE FRANGO ===
+
+export async function createFarmInvoice(invoice: {
+  access_key: string
+  invoice_number: string
+  invoice_series: string
+  invoice_date: string
+  authorization_date?: string
+  authorization_protocol?: string
+  supplier_name: string
+  supplier_cnpj?: string
+  supplier_address?: string
+  supplier_city?: string
+  supplier_state?: string
+  supplier_phone?: string
+  product_code?: string
+  product_description?: string
+  product_ncm?: string
+  unit?: string
+  quantity_kg: number
+  unit_price: number
+  total_value: number
+  live_chicken_count?: number
+  average_weight_per_chicken?: number
+  average_price_per_chicken?: number
+  notes?: string
+}) {
+  const { data, error } = await supabase
+    .from('farm_invoices')
+    .insert([invoice])
+    .select()
+    .single()
+
+  if (error) throw error
+
+  // Se houver quantidade de aves, criar registro de estoque
+  if (invoice.live_chicken_count && invoice.live_chicken_count > 0) {
+    const { data: stockData, error: stockError } = await supabase
+      .from('live_chicken_stock')
+      .insert([{
+        farm_invoice_id: data.id,
+        total_received: invoice.live_chicken_count,
+        total_slaughtered: 0,
+        remaining_chickens: invoice.live_chicken_count,
+        total_weight_kg: invoice.quantity_kg,
+        average_weight_per_chicken: invoice.average_weight_per_chicken || (invoice.quantity_kg / invoice.live_chicken_count),
+        status: 'active'
+      }])
+      .select()
+      .single()
+
+    if (stockError) throw stockError
+  }
+
+  return data
+}
+
+export async function getFarmInvoices() {
+  const { data, error } = await supabase
+    .from('farm_invoices')
+    .select(`
+      *,
+      live_chicken_stock (*)
+    `)
+    .order('invoice_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function getFarmInvoiceById(id: string) {
+  const { data, error } = await supabase
+    .from('farm_invoices')
+    .select(`
+      *,
+      live_chicken_stock (*),
+      daily_slaughter (*)
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getFarmInvoiceByAccessKey(accessKey: string) {
+  const { data, error } = await supabase
+    .from('farm_invoices')
+    .select('*')
+    .eq('access_key', accessKey)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateFarmInvoice(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('farm_invoices')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteFarmInvoice(id: string) {
+  const { error } = await supabase
+    .from('farm_invoices')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+// === ESTOQUE DE AVES VIVAS ===
+
+export async function getLiveChickenStock() {
+  const { data, error } = await supabase
+    .from('live_chicken_stock')
+    .select(`
+      *,
+      farm_invoices (*),
+      daily_slaughter (*)
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function getLiveChickenStockById(id: string) {
+  const { data, error } = await supabase
+    .from('live_chicken_stock')
+    .select(`
+      *,
+      farm_invoices (*),
+      daily_slaughter (*)
+    `)
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateLiveChickenStock(id: string, updates: any) {
+  const { data, error } = await supabase
+    .from('live_chicken_stock')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// === ABATE DIÁRIO ===
+
+export async function createDailySlaughter(slaughter: {
+  live_chicken_stock_id: string
+  slaughter_date: string
+  chickens_slaughtered: number
+  total_weight_kg: number
+  average_weight_per_chicken?: number
+  daily_target_kg?: number
+  notes?: string
+}) {
+  // Calcular peso médio se não fornecido
+  const averageWeight = slaughter.average_weight_per_chicken || 
+    (slaughter.total_weight_kg / slaughter.chickens_slaughtered)
+  
+  // Verificar se meta foi alcançada
+  const dailyTarget = slaughter.daily_target_kg || 200
+  const targetAchieved = slaughter.total_weight_kg >= dailyTarget
+
+  const { data, error } = await supabase
+    .from('daily_slaughter')
+    .insert([{
+      ...slaughter,
+      average_weight_per_chicken: averageWeight,
+      daily_target_kg: dailyTarget,
+      target_achieved: targetAchieved
+    }])
+    .select()
+    .single()
+
+  if (error) throw error
+
+  // Atualizar estoque de aves vivas
+  const { data: stockData, error: stockError } = await supabase
+    .from('live_chicken_stock')
+    .select('total_slaughtered, remaining_chickens')
+    .eq('id', slaughter.live_chicken_stock_id)
+    .single()
+
+  if (stockError) throw stockError
+
+  const newTotalSlaughtered = (stockData.total_slaughtered || 0) + slaughter.chickens_slaughtered
+  const newRemainingChickens = stockData.remaining_chickens - slaughter.chickens_slaughtered
+
+  const { error: updateError } = await supabase
+    .from('live_chicken_stock')
+    .update({
+      total_slaughtered: newTotalSlaughtered,
+      remaining_chickens: newRemainingChickens,
+      status: newRemainingChickens === 0 ? 'completed' : 'active'
+    })
+    .eq('id', slaughter.live_chicken_stock_id)
+
+  if (updateError) throw updateError
+
+  return data
+}
+
+export async function getDailySlaughter(date?: string) {
+  let query = supabase
+    .from('daily_slaughter')
+    .select(`
+      *,
+      live_chicken_stock (
+        *,
+        farm_invoices (*)
+      )
+    `)
+    .order('slaughter_date', { ascending: false })
+
+  if (date) {
+    query = query.eq('slaughter_date', date)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data
+}
+
+export async function getDailySlaughterByDateRange(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from('daily_slaughter')
+    .select(`
+      *,
+      live_chicken_stock (
+        *,
+        farm_invoices (*)
+      )
+    `)
+    .gte('slaughter_date', startDate)
+    .lte('slaughter_date', endDate)
+    .order('slaughter_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function getProductionSummary(date?: string) {
+  const today = date || new Date().toISOString().split('T')[0]
+  
+  // Buscar abate do dia
+  const { data: todaySlaughter } = await supabase
+    .from('daily_slaughter')
+    .select('*')
+    .eq('slaughter_date', today)
+
+  const totalSlaughtered = todaySlaughter?.reduce((sum, s) => sum + s.chickens_slaughtered, 0) || 0
+  const totalWeight = todaySlaughter?.reduce((sum, s) => sum + Number(s.total_weight_kg), 0) || 0
+  const targetAchieved = todaySlaughter?.some(s => s.target_achieved) || false
+
+  // Buscar estoque de aves vivas
+  const { data: liveStock } = await supabase
+    .from('live_chicken_stock')
+    .select('*')
+    .eq('status', 'active')
+
+  const totalLiveChickens = liveStock?.reduce((sum, s) => sum + s.remaining_chickens, 0) || 0
+  const totalLiveWeight = liveStock?.reduce((sum, s) => sum + Number(s.total_weight_kg), 0) || 0
+
+  return {
+    date: today,
+    totalSlaughtered,
+    totalWeight,
+    dailyTarget: 200,
+    targetAchieved,
+    targetPercentage: (totalWeight / 200) * 100,
+    totalLiveChickens,
+    totalLiveWeight,
+    remainingToTarget: Math.max(0, 200 - totalWeight)
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {

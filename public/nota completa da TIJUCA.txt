@@ -1,0 +1,268 @@
+# Transcrição completa e organizada da nota + informações anotadas
+
+## Empresa / Emitente da Nota
+
+**TIJUCA ALIMENTOS LTDA**
+Indústria de Carnes
+Tijuca Alimentos Ltda
+
+### Dados encontrados:
+
+* **Nome fantasia:** TIJUCA
+* **Endereço:** Rod. CE 040, KM 208
+* **Zona Rural**
+* **Beberibe - CE**
+* **CEP:** 62.840-000
+
+---
+
+# Tipo do documento
+
+## DANFE
+
+Documento Auxiliar da Nota Fiscal Eletrônica (NF-e)
+
+* **Entrada**
+* **Folha:** 01/01
+
+---
+
+# Chave de acesso da NF-e
+
+**2326 0500 0438 4089 2368 5505 0000 0772 5011 0933 7302**
+
+---
+
+# Consulta da NF-e
+
+Texto encontrado:
+
+> “Consulta de autenticidade no portal nacional da NF-e”
+
+---
+
+# Dados da Nota
+
+| Campo                    | Valor                                |
+| ------------------------ | ------------------------------------ |
+| Série                    | 001                                  |
+| Número da Nota           | 000077250                            |
+| Natureza da Operação     | VENDA DE PRODUÇÃO DO ESTABELECIMENTO |
+| Protocolo de autorização | 223260080011579                      |
+| Data autorização         | 15/05/2026                           |
+| Hora autorização         | 16:07:36-03:00                       |
+
+---
+
+# Dados do Destinatário / Remetente
+
+| Campo       | Valor                            |
+| ----------- | -------------------------------- |
+| Nome        | FRANCISCO CARLOS NETO            |
+| CPF/CNPJ    | 111.193.923-49                   |
+| Endereço    | RUA ISAURA LEITE FIGUEIREDO, 242 |
+| Complemento | NA ENTRADA DE MAJORLÂNDIA        |
+| Bairro      | MAJORLÂNDIA                      |
+| Município   | ARACATI                          |
+| UF          | CE                               |
+| CEP         | 62800-000                        |
+| Telefone    | 88992092915                      |
+
+---
+
+# Datas
+
+| Campo                 | Valor      |
+| --------------------- | ---------- |
+| Data de emissão       | 15/05/2026 |
+| Data de entrada/saída | 16/05/2026 |
+| Hora entrada/saída    | 16:07:27   |
+
+---
+
+# Valores / Impostos
+
+| Campo                          | Valor    |
+| ------------------------------ | -------- |
+| Base cálculo ICMS              | 0,00     |
+| Valor ICMS                     | 0,00     |
+| Base cálculo ICMS substituição | 0,00     |
+| Valor ICMS substituição        | 0,00     |
+| Valor total dos produtos       | 1.300,00 |
+| Valor frete                    | 0,00     |
+| Valor seguro                   | 0,00     |
+| Desconto                       | 0,00     |
+| Outras despesas acessórias     | 0,00     |
+| Valor IPI                      | 0,00     |
+| Valor total da nota            | 1.300,00 |
+
+---
+
+# Transporte / Volumes
+
+| Campo           | Valor         |
+| --------------- | ------------- |
+| Frete por conta | 9 - SEM FRETE |
+| Quantidade      | 200           |
+| Espécie         | KILO          |
+
+---
+
+# Produto / Serviço
+
+| Campo          | Valor           |
+| -------------- | --------------- |
+| Código produto | PA0200001       |
+| Descrição      | FRANGO DE CORTE |
+| NCM/SH         | 01059400        |
+| CST            | 040             |
+| CFOP           | 5101            |
+| Unidade        | KG              |
+| Quantidade     | 200,0000        |
+| Valor unitário | 6,500000        |
+| Valor total    | 1.300,00        |
+| BC ICMS        | 0,00            |
+| VL ICMS        | 0,00            |
+| VL IPI         | 0,00            |
+| Alíquota ICMS  | 0,00%           |
+| Alíquota IPI   | 0,00%           |
+
+---
+
+# Papel anotado manualmente (controle interno)
+
+## Informações escritas à mão
+
+| Campo         | Valor                                |
+| ------------- | ------------------------------------ |
+| AV            | 66                                   |
+| Nome          | ACO CARLOS                           |
+| Data          | 03/11/2 (difícil leitura incompleta) |
+| Código        | C.P01                                |
+| Valor anotado | M = 3.030                            |
+
+---
+
+# Cupom / Controle de pesagem
+
+## Pesos identificados
+
+### Lista de pesagens:
+
+| Horário         | Peso     |
+| --------------- | -------- |
+| 09:00           | 19,5 kg  |
+| 09:00           | 18,0 kg  |
+| 09:01           | 18,0 kg  |
+| 09:01           | 18,0 kg  |
+| 09:01           | 16,5 kg  |
+| 09:01           | 16,0 kg  |
+| 09:01           | 16,0 kg  |
+| 09:01           | 18,0 kg  |
+| 09:02           | 19,0 kg  |
+| 09:02           | 17,0 kg  |
+| TOTAL ACUMULADO | 200,0 kg |
+
+---
+
+# Informações operacionais do seu negócio (baseado no que você explicou)
+
+## Pedido recebido
+
+* O lote chegou ontem.
+* A nota é referente a:
+
+  * **66 frangos vivos**
+  * Total aproximado:
+
+    * **200 kg**
+    * Valor total:
+
+      * **R$ 1.300,00**
+
+---
+
+# Produção realizada hoje
+
+Você informou:
+
+* Foram abatidos:
+
+  * **41 frangos**
+
+## Cálculo dos que sobraram
+
+66 - 41 = 25
+
+### Resultado:
+
+* **Restaram 25 frangos vivos**
+
+---
+
+# Média aproximada por frango
+
+## Peso médio por frango
+
+\frac{200}{66}\approx3.03
+
+### Resultado:
+
+* Cada frango pesa aproximadamente:
+
+  * **3,03 kg**
+
+---
+
+# Valor médio por frango
+
+\frac{1300}{66}\approx19.70
+
+### Resultado:
+
+* Custo médio por frango:
+
+  * **R$ 19,70**
+
+---
+
+# Estrutura ideal para o seu aplicativo (JSON)
+
+```json
+{
+  "empresa": {
+    "nome": "Tijuca Alimentos Ltda",
+    "fantasia": "TIJUCA",
+    "cnpj": "00.043.840/8923-68"
+  },
+  "nota_fiscal": {
+    "numero": "000077250",
+    "serie": "001",
+    "data_emissao": "2026-05-15",
+    "valor_total": 1300.00,
+    "tipo_operacao": "Venda de produção do estabelecimento"
+  },
+  "cliente": {
+    "nome": "Francisco Carlos Neto",
+    "cpf": "11119392349",
+    "cidade": "Aracati",
+    "bairro": "Majorlandia",
+    "uf": "CE",
+    "telefone": "88992092915"
+  },
+  "produto": {
+    "codigo": "PA0200001",
+    "descricao": "Frango de corte",
+    "quantidade_kg": 200,
+    "valor_unitario_kg": 6.50,
+    "valor_total": 1300.00
+  },
+  "controle_interno": {
+    "quantidade_frangos": 66,
+    "abatidos_hoje": 41,
+    "restantes": 25,
+    "peso_medio_frango": 3.03,
+    "valor_medio_por_frango": 19.70
+  }
+}
+```
