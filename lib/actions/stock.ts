@@ -1184,45 +1184,30 @@ export async function fetchNfeDataFromSEFAZ(accessKey: string) {
 
     const xmlText = await response.text()
 
-    // Parsear XML para extrair dados da NF-e
-    const parser = new DOMParser()
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml')
+    // Parsear XML usando regex (compatível com Node.js)
+    const extractXmlValue = (xml: string, tagName: string) => {
+      const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i')
+      const match = xml.match(regex)
+      return match ? match[1] : null
+    }
 
     // Verificar se houve erro na resposta
-    const fault = xmlDoc.getElementsByTagName('soap12:Fault')[0]
-    if (fault) {
-      const faultString = fault.getElementsByTagName('faultstring')[0]?.textContent
+    const faultString = extractXmlValue(xmlText, 'faultstring')
+    if (faultString) {
       throw new Error(`Erro da SEFAZ: ${faultString}`)
     }
 
-    // Extrair dados da NF-e
-    const retConsNFe = xmlDoc.getElementsByTagName('retConsNFe')[0]
-    if (!retConsNFe) {
-      throw new Error('Não foi possível encontrar os dados da NF-e na resposta')
-    }
-
-    const infNFe = retConsNFe.getElementsByTagName('infNFe')[0]
-    const ide = infNFe?.getElementsByTagName('ide')[0]
-    const emit = infNFe?.getElementsByTagName('emit')[0]
-    const dest = infNFe?.getElementsByTagName('dest')[0]
-    const det = infNFe?.getElementsByTagName('det')[0]
-    const prod = det?.getElementsByTagName('prod')[0]
-    const icmsTot = infNFe?.getElementsByTagName('ICMSTot')[0]
-
-    // Extrair dados
-    const invoiceNumber = ide?.getElementsByTagName('nNF')[0]?.textContent || ''
-    const invoiceSeries = ide?.getElementsByTagName('serie')[0]?.textContent || '001'
-    const invoiceDate = ide?.getElementsByTagName('dhEmi')[0]?.textContent?.split('T')[0] || ''
-    const supplierName = emit?.getElementsByTagName('xNome')[0]?.textContent || ''
-    const supplierCnpj = emit?.getElementsByTagName('CNPJ')[0]?.textContent || ''
-    const supplierAddress = `${emit?.getElementsByTagName('xLgr')[0]?.textContent}, ${emit?.getElementsByTagName('nro')[0]?.textContent}`
-    const supplierCity = emit?.getElementsByTagName('xMun')[0]?.textContent || ''
-    const supplierState = emit?.getElementsByTagName('UF')[0]?.textContent || ''
-    const productDescription = prod?.getElementsByTagName('xProd')[0]?.textContent || ''
-    const productCode = prod?.getElementsByTagName('cProd')[0]?.textContent || ''
-    const quantity = prod?.getElementsByTagName('qCom')[0]?.textContent || '0'
-    const unitPrice = prod?.getElementsByTagName('vUnCom')[0]?.textContent || '0'
-    const totalValue = icmsTot?.getElementsByTagName('vNF')[0]?.textContent || '0'
+    // Extrair dados da NF-e usando regex
+    const invoiceNumber = extractXmlValue(xmlText, 'nNF') || ''
+    const invoiceSeries = extractXmlValue(xmlText, 'serie') || '001'
+    const invoiceDate = extractXmlValue(xmlText, 'dhEmi')?.split('T')[0] || ''
+    const supplierName = extractXmlValue(xmlText, 'xNome') || ''
+    const supplierCnpj = extractXmlValue(xmlText, 'CNPJ') || ''
+    const productDescription = extractXmlValue(xmlText, 'xProd') || ''
+    const productCode = extractXmlValue(xmlText, 'cProd') || ''
+    const quantity = extractXmlValue(xmlText, 'qCom') || '0'
+    const unitPrice = extractXmlValue(xmlText, 'vUnCom') || '0'
+    const totalValue = extractXmlValue(xmlText, 'vNF') || '0'
 
     // Verificar se a nota já existe no banco
     const existingInvoice = await getFarmInvoiceByAccessKey(accessKey)
@@ -1237,9 +1222,6 @@ export async function fetchNfeDataFromSEFAZ(accessKey: string) {
       invoice_date: invoiceDate,
       supplier_name: supplierName,
       supplier_cnpj: supplierCnpj,
-      supplier_address: supplierAddress,
-      supplier_city: supplierCity,
-      supplier_state: supplierState,
       product_code: productCode,
       product_description: productDescription,
       quantity_kg: parseFloat(quantity),

@@ -6,8 +6,7 @@ import {
   getFarmInvoices, 
   createFarmInvoice, 
   deleteFarmInvoice,
-  getProductionSummary,
-  fetchNfeDataFromSEFAZ
+  getProductionSummary
 } from '@/lib/actions/stock'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -86,7 +85,21 @@ export default function FarmInvoicesPage() {
 
     setFetchingNfe(true)
     try {
-      const nfeData = await fetchNfeDataFromSEFAZ(formData.access_key)
+      const response = await fetch('/api/nfe/fetch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessKey: formData.access_key })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao buscar dados da NF-e')
+      }
+
+      const nfeData = result.data
       
       setFormData({
         ...formData,
