@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Shield,
   BarChart3,
+  Scissors,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +43,8 @@ const sidebarLinks = [
   { href: '/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/admin/kits', label: 'Kits e Ofertas', icon: Gift },
   { href: '/admin/estoque', label: 'Gestão de Estoque', icon: Scale },
+  { href: '/admin/producao/notas-entrada', label: 'Notas de Entrada', icon: FileText },
+  { href: '/admin/producao/abate', label: 'Controle de Abate', icon: Scissors },
   { href: '/admin/financeiro', label: 'Dashboard Financeiro', icon: BarChart3 },
   { href: '/admin/custos/granja', label: 'Custos da Granja', icon: DollarSign },
   { href: '/admin/custos/operacionais', label: 'Custos Operacionais', icon: DollarSign },
