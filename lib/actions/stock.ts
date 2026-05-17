@@ -344,6 +344,45 @@ export async function updateOperationalCostNextPayment(costId: string, nextPayme
   return data
 }
 
+export async function updateOperationalCost(costId: string, cost: any) {
+  const { data, error } = await supabase
+    .from('operational_costs')
+    .update({
+      cost_type: cost.cost_type,
+      description: cost.description,
+      amount: cost.amount,
+      date: cost.date,
+      notes: cost.notes,
+      category_id: cost.category_id,
+      frequency: cost.frequency,
+      payment_method: cost.payment_method,
+      due_date: cost.due_date,
+      is_recurring: cost.is_recurring,
+      estimated_duration_days: cost.estimated_duration_days,
+      quantity_purchased: cost.quantity_purchased,
+      unit: cost.unit,
+      vehicle_mileage: cost.vehicle_mileage,
+      average_consumption: cost.average_consumption,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', costId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteOperationalCost(costId: string) {
+  const { error } = await supabase
+    .from('operational_costs')
+    .delete()
+    .eq('id', costId)
+
+  if (error) throw error
+  return { success: true }
+}
+
 export async function calculateNextPaymentDate(frequency: string, lastDate: string): Promise<string> {
   const date = new Date(lastDate)
   

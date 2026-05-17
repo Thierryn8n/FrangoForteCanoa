@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getOperationalCosts, createOperationalCost, getOperationalCostCategories } from '@/lib/actions/stock'
-import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Clock, AlertCircle } from 'lucide-react'
+import { getOperationalCosts, createOperationalCost, getOperationalCostCategories, updateOperationalCost, deleteOperationalCost } from '@/lib/actions/stock'
+import { Plus, DollarSign, TrendingUp, TrendingDown, Calendar, Clock, AlertCircle, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,8 @@ export default function OperationalCostsPage() {
   const [costs, setCosts] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingCost, setEditingCost] = useState<any>(null)
   const [formData, setFormData] = useState({
     cost_type: 'other',
     description: '',
@@ -132,6 +134,92 @@ export default function OperationalCostsPage() {
     } catch (error) {
       console.error('Error creating cost:', error)
       alert('Erro ao criar custo')
+    }
+  }
+
+  const handleEdit = (cost: any) => {
+    setEditingCost(cost)
+    setFormData({
+      cost_type: cost.cost_type || 'other',
+      description: cost.description || '',
+      amount: cost.amount || '',
+      date: cost.date || new Date().toISOString().split('T')[0],
+      notes: cost.notes || '',
+      category_id: cost.category_id || '',
+      frequency: cost.frequency || 'onetime',
+      payment_method: cost.payment_method || '',
+      due_date: cost.due_date || '',
+      is_recurring: cost.is_recurring || false,
+      estimated_duration_days: cost.estimated_duration_days || '',
+      quantity_purchased: cost.quantity_purchased || '',
+      unit: cost.unit || '',
+      vehicle_mileage: cost.vehicle_mileage || '',
+      average_consumption: cost.average_consumption || ''
+    })
+    setShowEditModal(true)
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingCost) return
+    
+    try {
+      await updateOperationalCost(editingCost.id, {
+        cost_type: formData.cost_type as any,
+        description: formData.description,
+        amount: Number(formData.amount),
+        date: formData.date,
+        notes: formData.notes,
+        category_id: formData.category_id || undefined,
+        frequency: formData.frequency as any,
+        payment_method: formData.payment_method as any,
+        due_date: formData.due_date || undefined,
+        is_recurring: formData.is_recurring,
+        estimated_duration_days: formData.estimated_duration_days ? Number(formData.estimated_duration_days) : undefined,
+        quantity_purchased: formData.quantity_purchased ? Number(formData.quantity_purchased) : undefined,
+        unit: formData.unit || undefined,
+        vehicle_mileage: formData.vehicle_mileage ? Number(formData.vehicle_mileage) : undefined,
+        average_consumption: formData.average_consumption ? Number(formData.average_consumption) : undefined
+      })
+      setShowEditModal(false)
+      setEditingCost(null)
+      setFormData({
+        cost_type: 'other',
+        description: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: '',
+        category_id: '',
+        frequency: 'onetime',
+        payment_method: '',
+        due_date: '',
+        is_recurring: false,
+        estimated_duration_days: '',
+        quantity_purchased: '',
+        unit: '',
+        vehicle_mileage: '',
+        average_consumption: ''
+      })
+      // Refresh costs
+      const costsData = await getOperationalCosts()
+      setCosts(costsData || [])
+    } catch (error) {
+      console.error('Error updating cost:', error)
+      alert('Erro ao atualizar custo')
+    }
+  }
+
+  const handleDelete = async (costId: string) => {
+    if (!confirm('Tem certeza que deseja apagar este custo?')) return
+    
+    try {
+      await deleteOperationalCost(costId)
+      // Refresh costs
+      const costsData = await getOperationalCosts()
+      setCosts(costsData || [])
+    } catch (error) {
+      console.error('Error deleting cost:', error)
+      alert('Erro ao apagar custo')
     }
   }
 
@@ -280,6 +368,24 @@ export default function OperationalCostsPage() {
                       Vencimento: {formatDate(cost.due_date)}
                     </div>
                   )}
+                  <div className="mt-3 pt-3 border-t flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(cost)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(cost.id)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Apagar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -417,6 +523,144 @@ export default function OperationalCostsPage() {
                   </Button>
                   <Button type="submit">
                     Criar Custo
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
+          <Card className="w-full max-w-2xl mx-4 my-8">
+            <CardHeader>
+              <CardTitle>Editar Custo Operacional</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-description">Descrição *</Label>
+                    <Input
+                      id="edit-description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-amount">Valor *</Label>
+                    <Input
+                      id="edit-amount"
+                      type="number"
+                      step="0.01"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-category_id">Categoria</Label>
+                    <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-date">Data *</Label>
+                    <Input
+                      id="edit-date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-frequency">Frequência</Label>
+                    <Select value={formData.frequency} onValueChange={(value) => setFormData({ ...formData, frequency: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="onetime">Único</SelectItem>
+                        <SelectItem value="daily">Diário</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="biweekly">Quinzenal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                        <SelectItem value="quarterly">Trimestral</SelectItem>
+                        <SelectItem value="yearly">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-payment_method">Forma de Pagamento</Label>
+                    <Select value={formData.payment_method} onValueChange={(value) => setFormData({ ...formData, payment_method: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Dinheiro</SelectItem>
+                        <SelectItem value="card">Cartão</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="transfer">Transferência</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-due_date">Data de Vencimento</Label>
+                    <Input
+                      id="edit-due_date"
+                      type="date"
+                      value={formData.due_date}
+                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <input
+                      type="checkbox"
+                      id="edit-is_recurring"
+                      checked={formData.is_recurring}
+                      onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="edit-is_recurring">Custo Recorrente</Label>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-notes">Observações</Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    Atualizar Custo
                   </Button>
                 </div>
               </form>
