@@ -20,12 +20,12 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (manualInput.length === 44) {
-      onScan(manualInput)
-      onClose()
-    } else {
-      setError('A chave de acesso deve ter 44 dígitos')
+    if (manualInput.length !== 44) {
+      setError('A chave de acesso deve ter exatamente 44 dígitos')
+      return
     }
+    onScan(manualInput)
+    onClose()
   }
 
   const handleManualInput = (value: string) => {

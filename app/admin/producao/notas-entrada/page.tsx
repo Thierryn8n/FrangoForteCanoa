@@ -308,9 +308,14 @@ export default function FarmInvoicesPage() {
                       <Input
                         id="access_key"
                         value={formData.access_key}
-                        onChange={(e) => setFormData({ ...formData, access_key: e.target.value })}
-                        placeholder="44 dígitos"
+                        onChange={(e) => {
+                          // Aceitar apenas números
+                          const cleaned = e.target.value.replace(/\D/g, '')
+                          setFormData({ ...formData, access_key: cleaned })
+                        }}
+                        placeholder="44 dígitos numéricos"
                         maxLength={44}
+                        pattern="[0-9]{44}"
                       />
                       <Button
                         type="button"
