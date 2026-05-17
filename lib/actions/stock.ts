@@ -1099,6 +1099,59 @@ export async function getProductionSummary(date?: string) {
   }
 }
 
+// === INTEGRAÇÃO COM API DA SEFAZ ===
+
+export async function fetchNfeDataFromSEFAZ(accessKey: string) {
+  try {
+    // Nota: Esta é uma simulação da integração com API da SEFAZ
+    // A integração real requer:
+    // 1. Certificado digital A1 ou A3
+    // 2. Cadastro no portal da SEFAZ
+    // 3. Biblioteca de assinatura digital
+    // 4. Configuração de ambiente (homologação/produção)
+    
+    // Simulação de resposta da API
+    const simulatedResponse = {
+      success: true,
+      data: {
+        access_key: accessKey,
+        invoice_number: '000077250',
+        invoice_series: '001',
+        invoice_date: '2026-05-15',
+        authorization_date: '2026-05-15T16:07:36-03:00',
+        authorization_protocol: '223260080011579',
+        supplier_name: 'TIJUCA ALIMENTOS LTDA',
+        supplier_cnpj: '00.043.840/8923-68',
+        supplier_address: 'Rod. CE 040, KM 208, Zona Rural',
+        supplier_city: 'Beberibe',
+        supplier_state: 'CE',
+        supplier_zip: '62840-000',
+        product_code: 'PA0200001',
+        product_description: 'FRANGO DE CORTE',
+        product_ncm: '01059400',
+        unit: 'KG',
+        quantity_kg: 200,
+        unit_price: 6.50,
+        total_value: 1300.00,
+        icms_base: 0,
+        icms_value: 0,
+        ipi_value: 0
+      }
+    }
+
+    // Verificar se a nota já existe no banco
+    const existingInvoice = await getFarmInvoiceByAccessKey(accessKey)
+    if (existingInvoice) {
+      throw new Error('Nota fiscal já cadastrada')
+    }
+
+    return simulatedResponse.data
+  } catch (error) {
+    console.error('Erro ao buscar dados da NF-e:', error)
+    throw error
+  }
+}
+
 // === RELATÓRIOS ===
 
 export async function generateDailyReport(date: string) {

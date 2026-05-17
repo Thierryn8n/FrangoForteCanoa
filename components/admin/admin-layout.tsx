@@ -43,6 +43,7 @@ const sidebarLinks = [
   { href: '/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/admin/kits', label: 'Kits e Ofertas', icon: Gift },
   { href: '/admin/estoque', label: 'Gestão de Estoque', icon: Scale },
+  { href: '/admin/producao/dashboard', label: 'Dashboard Produção', icon: BarChart3 },
   { href: '/admin/producao/notas-entrada', label: 'Notas de Entrada', icon: FileText },
   { href: '/admin/producao/abate', label: 'Controle de Abate', icon: Scissors },
   { href: '/admin/financeiro', label: 'Dashboard Financeiro', icon: BarChart3 },

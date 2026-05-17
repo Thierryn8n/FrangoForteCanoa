@@ -22,12 +22,14 @@ import {
   Target,
   CheckCircle
 } from 'lucide-react'
+import { BarcodeScanner } from '@/components/admin/barcode-scanner'
 
 export default function FarmInvoicesPage() {
   const [loading, setLoading] = useState(true)
   const [invoices, setInvoices] = useState<any[]>([])
   const [productionSummary, setProductionSummary] = useState<any>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [formData, setFormData] = useState({
     access_key: '',
     invoice_number: '',
@@ -92,9 +94,9 @@ export default function FarmInvoicesPage() {
         quantity_kg: quantityKg,
         unit_price: unitPrice,
         total_value: quantityKg * unitPrice,
-        live_chicken_count: liveChickenCount || null,
-        average_weight_per_chicken: liveChickenCount > 0 ? quantityKg / liveChickenCount : null,
-        average_price_per_chicken: liveChickenCount > 0 ? (quantityKg * unitPrice) / liveChickenCount : null,
+        live_chicken_count: liveChickenCount || undefined,
+        average_weight_per_chicken: liveChickenCount > 0 ? quantityKg / liveChickenCount : undefined,
+        average_price_per_chicken: liveChickenCount > 0 ? (quantityKg * unitPrice) / liveChickenCount : undefined,
         notes: formData.notes
       }
 
@@ -268,13 +270,23 @@ export default function FarmInvoicesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="access_key">Chave de Acesso</Label>
-                    <Input
-                      id="access_key"
-                      value={formData.access_key}
-                      onChange={(e) => setFormData({ ...formData, access_key: e.target.value })}
-                      placeholder="44 dígitos"
-                      maxLength={44}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="access_key"
+                        value={formData.access_key}
+                        onChange={(e) => setFormData({ ...formData, access_key: e.target.value })}
+                        placeholder="44 dígitos"
+                        maxLength={44}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowScanner(true)}
+                      >
+                        <Barcode className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="invoice_number">Número da Nota</Label>
@@ -368,6 +380,17 @@ export default function FarmInvoicesPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Barcode Scanner */}
+      {showScanner && (
+        <BarcodeScanner
+          onScan={(barcode) => {
+            setFormData({ ...formData, access_key: barcode })
+            setShowScanner(false)
+          }}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </div>
   )
