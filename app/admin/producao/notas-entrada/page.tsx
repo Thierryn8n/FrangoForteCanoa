@@ -6,7 +6,8 @@ import {
   getFarmInvoices, 
   createFarmInvoice, 
   deleteFarmInvoice,
-  getProductionSummary 
+  getProductionSummary,
+  fetchNfeDataFromSEFAZ
 } from '@/lib/actions/stock'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ export default function FarmInvoicesPage() {
   const [productionSummary, setProductionSummary] = useState<any>(null)
   const [showModal, setShowModal] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [fetchingNfe, setFetchingNfe] = useState(false)
   const [formData, setFormData] = useState({
     access_key: '',
     invoice_number: '',
@@ -73,6 +75,38 @@ export default function FarmInvoicesPage() {
       console.error('Erro ao buscar dados:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFetchNfeData = async () => {
+    if (formData.access_key.length !== 44) {
+      alert('A chave de acesso deve ter 44 dígitos')
+      return
+    }
+
+    setFetchingNfe(true)
+    try {
+      const nfeData = await fetchNfeDataFromSEFAZ(formData.access_key)
+      
+      setFormData({
+        ...formData,
+        invoice_number: nfeData.invoice_number,
+        invoice_series: nfeData.invoice_series,
+        invoice_date: nfeData.invoice_date,
+        supplier_name: nfeData.supplier_name,
+        supplier_cnpj: nfeData.supplier_cnpj,
+        product_description: nfeData.product_description,
+        quantity_kg: nfeData.quantity_kg.toString(),
+        unit_price: nfeData.unit_price.toString(),
+        notes: `Dados importados da SEFAZ em ${new Date().toLocaleString('pt-BR')}`
+      })
+      
+      alert('Dados da NF-e importados com sucesso!')
+    } catch (error: any) {
+      console.error('Erro ao buscar dados da NF-e:', error)
+      alert(`Erro ao buscar dados da NF-e: ${error.message}`)
+    } finally {
+      setFetchingNfe(false)
     }
   }
 
@@ -298,6 +332,16 @@ export default function FarmInvoicesPage() {
                     />
                   </div>
                 </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleFetchNfeData}
+                  disabled={fetchingNfe || formData.access_key.length !== 44}
+                >
+                  {fetchingNfe ? 'Buscando dados da SEFAZ...' : 'Buscar dados da SEFAZ'}
+                </Button>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

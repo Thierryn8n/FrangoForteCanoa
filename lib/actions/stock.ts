@@ -1103,41 +1103,97 @@ export async function getProductionSummary(date?: string) {
 
 export async function fetchNfeDataFromSEFAZ(accessKey: string) {
   try {
-    // Nota: Esta é uma simulação da integração com API da SEFAZ
-    // A integração real requer:
-    // 1. Certificado digital A1 ou A3
-    // 2. Cadastro no portal da SEFAZ
-    // 3. Biblioteca de assinatura digital
-    // 4. Configuração de ambiente (homologação/produção)
+    // Extrair UF da chave de acesso (dígitos 25-26)
+    const ufCode = accessKey.substring(24, 26)
     
-    // Simulação de resposta da API
-    const simulatedResponse = {
-      success: true,
-      data: {
-        access_key: accessKey,
-        invoice_number: '000077250',
-        invoice_series: '001',
-        invoice_date: '2026-05-15',
-        authorization_date: '2026-05-15T16:07:36-03:00',
-        authorization_protocol: '223260080011579',
-        supplier_name: 'TIJUCA ALIMENTOS LTDA',
-        supplier_cnpj: '00.043.840/8923-68',
-        supplier_address: 'Rod. CE 040, KM 208, Zona Rural',
-        supplier_city: 'Beberibe',
-        supplier_state: 'CE',
-        supplier_zip: '62840-000',
-        product_code: 'PA0200001',
-        product_description: 'FRANGO DE CORTE',
-        product_ncm: '01059400',
-        unit: 'KG',
-        quantity_kg: 200,
-        unit_price: 6.50,
-        total_value: 1300.00,
-        icms_base: 0,
-        icms_value: 0,
-        ipi_value: 0
-      }
+    // Mapear código UF para URL da SEFAZ
+    const sefazUrls: Record<string, string> = {
+      '23': 'https://nfe.sefaz.ce.gov.br/nfe2/services/NfeConsulta2', // Ceará
+      '35': 'https://nfe.fazenda.sp.gov.br/nfe2/services/NfeConsulta2', // São Paulo
+      '31': 'https://nfe.fazenda.mg.gov.br/nfe2/services/NfeConsulta2', // Minas Gerais
+      '41': 'https://nfe.sefaz.pr.gov.br/nfe/NfeConsulta2', // Paraná
+      '43': 'https://nfe.sefaz.rs.gov.br/nfe2/services/NfeConsulta2', // Rio Grande do Sul
+      '52': 'https://nfe.sefaz.go.gov.br/nfe2/services/NfeConsulta2', // Goiás
+      // Adicionar outros estados conforme necessário
     }
+
+    const sefazUrl = sefazUrls[ufCode] || 'https://nfe.sefaz.ce.gov.br/nfe2/services/NfeConsulta2'
+
+    // Construir envelope SOAP para consulta
+    const soapEnvelope = `<?xml version="1.0" encoding="UTF-8"?>
+<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <soap12:Header>
+    <nfe:cdCabecMsg xmlns:nfe="http://www.portalfiscal.inf.br/nfe/wsdl/NfeConsulta2">
+      <nfe:versaoDados>4.00</nfe:versaoDados>
+      <nfe:cUF>${ufCode}</nfe:cUF>
+    </nfe:cdCabecMsg>
+  </soap12:Header>
+  <soap12:Body>
+    <nfeDadosMsg xmlns:nfe="http://www.portalfiscal.inf.br/nfe/wsdl/NfeConsulta2">
+      <consSitNFe versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+        <tpAmb>1</tpAmb>
+        <xServ>CONSULTAR</xServ>
+        <chNFe>${accessKey}</chNFe>
+      </consSitNFe>
+    </nfeDadosMsg>
+  </soap12:Body>
+</soap12:Envelope>`
+
+    // Fazer requisição para a SEFAZ
+    const response = await fetch(sefazUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/soap+xml; charset=utf-8',
+        'SOAPAction': 'http://www.portalfiscal.inf.br/nfe/wsdl/NfeConsulta2/nfeConsultaNF2'
+      },
+      body: soapEnvelope
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erro na consulta da SEFAZ: ${response.status} ${response.statusText}`)
+    }
+
+    const xmlText = await response.text()
+
+    // Parsear XML para extrair dados da NF-e
+    const parser = new DOMParser()
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml')
+
+    // Verificar se houve erro na resposta
+    const fault = xmlDoc.getElementsByTagName('soap12:Fault')[0]
+    if (fault) {
+      const faultString = fault.getElementsByTagName('faultstring')[0]?.textContent
+      throw new Error(`Erro da SEFAZ: ${faultString}`)
+    }
+
+    // Extrair dados da NF-e
+    const retConsNFe = xmlDoc.getElementsByTagName('retConsNFe')[0]
+    if (!retConsNFe) {
+      throw new Error('Não foi possível encontrar os dados da NF-e na resposta')
+    }
+
+    const infNFe = retConsNFe.getElementsByTagName('infNFe')[0]
+    const ide = infNFe?.getElementsByTagName('ide')[0]
+    const emit = infNFe?.getElementsByTagName('emit')[0]
+    const dest = infNFe?.getElementsByTagName('dest')[0]
+    const det = infNFe?.getElementsByTagName('det')[0]
+    const prod = det?.getElementsByTagName('prod')[0]
+    const icmsTot = infNFe?.getElementsByTagName('ICMSTot')[0]
+
+    // Extrair dados
+    const invoiceNumber = ide?.getElementsByTagName('nNF')[0]?.textContent || ''
+    const invoiceSeries = ide?.getElementsByTagName('serie')[0]?.textContent || '001'
+    const invoiceDate = ide?.getElementsByTagName('dhEmi')[0]?.textContent?.split('T')[0] || ''
+    const supplierName = emit?.getElementsByTagName('xNome')[0]?.textContent || ''
+    const supplierCnpj = emit?.getElementsByTagName('CNPJ')[0]?.textContent || ''
+    const supplierAddress = `${emit?.getElementsByTagName('xLgr')[0]?.textContent}, ${emit?.getElementsByTagName('nro')[0]?.textContent}`
+    const supplierCity = emit?.getElementsByTagName('xMun')[0]?.textContent || ''
+    const supplierState = emit?.getElementsByTagName('UF')[0]?.textContent || ''
+    const productDescription = prod?.getElementsByTagName('xProd')[0]?.textContent || ''
+    const productCode = prod?.getElementsByTagName('cProd')[0]?.textContent || ''
+    const quantity = prod?.getElementsByTagName('qCom')[0]?.textContent || '0'
+    const unitPrice = prod?.getElementsByTagName('vUnCom')[0]?.textContent || '0'
+    const totalValue = icmsTot?.getElementsByTagName('vNF')[0]?.textContent || '0'
 
     // Verificar se a nota já existe no banco
     const existingInvoice = await getFarmInvoiceByAccessKey(accessKey)
@@ -1145,7 +1201,22 @@ export async function fetchNfeDataFromSEFAZ(accessKey: string) {
       throw new Error('Nota fiscal já cadastrada')
     }
 
-    return simulatedResponse.data
+    return {
+      access_key: accessKey,
+      invoice_number: invoiceNumber,
+      invoice_series: invoiceSeries,
+      invoice_date: invoiceDate,
+      supplier_name: supplierName,
+      supplier_cnpj: supplierCnpj,
+      supplier_address: supplierAddress,
+      supplier_city: supplierCity,
+      supplier_state: supplierState,
+      product_code: productCode,
+      product_description: productDescription,
+      quantity_kg: parseFloat(quantity),
+      unit_price: parseFloat(unitPrice),
+      total_value: parseFloat(totalValue)
+    }
   } catch (error) {
     console.error('Erro ao buscar dados da NF-e:', error)
     throw error
