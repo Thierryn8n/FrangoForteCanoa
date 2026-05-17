@@ -117,7 +117,22 @@ export default function FarmInvoicesPage() {
       alert('Dados da NF-e importados com sucesso!')
     } catch (error: any) {
       console.error('Erro ao buscar dados da NF-e:', error)
-      alert(`Erro ao buscar dados da NF-e: ${error.message}`)
+      const errorMessage = error.message || 'Erro ao buscar dados da NF-e'
+      
+      // Se o erro for relacionado à SEFAZ bloqueando a requisição, oferecer opção de entrada manual
+      if (errorMessage.includes('fetch failed') || errorMessage.includes('401') || errorMessage.includes('500')) {
+        const useManual = confirm(
+          'Não foi possível conectar à SEFAZ. A SEFAZ pode estar bloqueando requisições do Vercel ou exigir certificado digital.\n\n' +
+          'Deseja preencher os dados manualmente?\n\n' +
+          'Erro: ' + errorMessage
+        )
+        if (useManual) {
+          // Não faz nada, apenas permite entrada manual
+          alert('Por favor, preencha os dados da nota fiscal manualmente.')
+        }
+      } else {
+        alert(`Erro ao buscar dados da NF-e: ${errorMessage}`)
+      }
     } finally {
       setFetchingNfe(false)
     }
