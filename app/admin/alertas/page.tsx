@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getAlerts, markAlertAsRead, resolveAlert, getAlertsSummary } from '@/lib/actions/stock'
-import { AlertTriangle, CheckCircle, XCircle, Info, Bell, DollarSign, Calendar, TrendingUp } from 'lucide-react'
+import { AlertTriangle, CheckCircle, XCircle, Info, Bell, DollarSign, Calendar, TrendingUp, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
