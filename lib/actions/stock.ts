@@ -1099,6 +1099,35 @@ export async function getProductionSummary(date?: string) {
   }
 }
 
+// === VERIFICAÇÃO DE ESTADO DAS TABELAS ===
+
+export async function getTablesStatus() {
+  try {
+    // Verificar status das tabelas principais
+    const [productsResult, farmInvoicesResult, liveChickenStockResult, dailySlaughterResult] = await Promise.all([
+      supabase.from('products').select('id', { count: 'exact', head: true }),
+      supabase.from('farm_invoices').select('id', { count: 'exact', head: true }),
+      supabase.from('live_chicken_stock').select('id', { count: 'exact', head: true }),
+      supabase.from('daily_slaughter').select('id', { count: 'exact', head: true })
+    ])
+
+    return {
+      products: (productsResult.count || 0) === 0,
+      farm_invoices: (farmInvoicesResult.count || 0) === 0,
+      live_chicken_stock: (liveChickenStockResult.count || 0) === 0,
+      daily_slaughter: (dailySlaughterResult.count || 0) === 0
+    }
+  } catch (error) {
+    console.error('Erro ao verificar status das tabelas:', error)
+    return {
+      products: false,
+      farm_invoices: false,
+      live_chicken_stock: false,
+      daily_slaughter: false
+    }
+  }
+}
+
 // === INTEGRAÇÃO COM API DA SEFAZ ===
 
 export async function fetchNfeDataFromSEFAZ(accessKey: string) {

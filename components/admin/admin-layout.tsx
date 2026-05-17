@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { getTablesStatus } from '@/lib/actions/stock'
 import { useAdminAuth } from '@/contexts/admin-auth-context'
 import {
   LayoutDashboard,
@@ -111,6 +113,42 @@ function UserMenu() {
 
 function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () => void }) {
   const pathname = usePathname()
+  const [tablesStatus, setTablesStatus] = useState<any>(null)
+
+  useEffect(() => {
+    async function checkTablesStatus() {
+      try {
+        const status = await getTablesStatus()
+        setTablesStatus(status)
+      } catch (error) {
+        console.error('Erro ao verificar status das tabelas:', error)
+      }
+    }
+    checkTablesStatus()
+  }, [])
+
+  // Mapear links para tabelas correspondentes
+  const linkToTableMap: Record<string, keyof typeof tablesStatus> = {
+    '/admin/produtos': 'products',
+    '/admin/producao/notas-entrada': 'farm_invoices',
+    '/admin/producao/abate': 'live_chicken_stock',
+    '/admin/producao/dashboard': 'daily_slaughter'
+  }
+
+  // Verificar se a tabela correspondente está vazia
+  const isTableEmpty = (href: string) => {
+    const tableKey = linkToTableMap[href]
+    return tablesStatus?.[tableKey] === true
+  }
+
+  // Reordenar links para mostrar páginas que precisam ser preenchidas primeiro
+  const orderedLinks = [...sidebarLinks].sort((a, b) => {
+    const aEmpty = isTableEmpty(a.href)
+    const bEmpty = isTableEmpty(b.href)
+    if (aEmpty && !bEmpty) return -1
+    if (!aEmpty && bEmpty) return 1
+    return 0
+  })
 
   return (
     <aside className={`${mobile ? 'w-full' : 'w-64'} bg-sidebar text-sidebar-foreground flex flex-col h-full`}>
@@ -133,9 +171,10 @@ function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () =
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {sidebarLinks.map((link) => {
+        {orderedLinks.map((link) => {
           const isActive = pathname === link.href || (link.href !== '/admin' && pathname.startsWith(link.href))
           const isProductionPage = link.href.includes('/producao') || link.href.includes('/abate')
+          const tableEmpty = isTableEmpty(link.href)
           
           return (
             <Link
@@ -152,6 +191,9 @@ function Sidebar({ mobile = false, onClose }: { mobile?: boolean; onClose?: () =
             >
               <link.icon className="w-4 h-4" />
               <span className="font-medium">{link.label}</span>
+              {tableEmpty && (
+                <div className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              )}
             </Link>
           )
         })}
