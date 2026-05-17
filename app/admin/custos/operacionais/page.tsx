@@ -335,14 +335,21 @@ export default function OperationalCostsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white rounded-lg border">
                   <p className="text-sm text-muted-foreground">Custo Total por KG</p>
                   <p className="text-3xl font-bold text-blue-600">{formatCurrency(costsPerKg.totalCostPerKg)}/KG</p>
+                  <p className="text-xs text-muted-foreground">Incluindo frango da granja</p>
                 </div>
                 <div className="p-4 bg-white rounded-lg border">
-                  <p className="text-sm text-muted-foreground">Total de Custos Operacionais</p>
-                  <p className="text-3xl font-bold">{formatCurrency(costsPerKg.totalCosts)}</p>
+                  <p className="text-sm text-muted-foreground">Custo Frango Granja</p>
+                  <p className="text-3xl font-bold text-red-600">{formatCurrency(costsPerKg.farmPricePerKg)}/KG</p>
+                  <p className="text-xs text-muted-foreground">Preço de compra</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Custos Operacionais</p>
+                  <p className="text-3xl font-bold text-green-600">{formatCurrency(costsPerKg.operationalCostsTotal / costsPerKg.totalKgSold)}/KG</p>
+                  <p className="text-xs text-muted-foreground">Sacos, combustível, etc.</p>
                 </div>
               </div>
 
@@ -372,8 +379,9 @@ export default function OperationalCostsPage() {
 
               <div className="p-3 bg-blue-100 rounded-lg border border-blue-300">
                 <p className="text-sm text-blue-800">
-                  <strong>Exemplo prático:</strong> Se você vende o frango a R$ 16,00/KG e o custo operacional total é {formatCurrency(costsPerKg.totalCostPerKg)}/KG, 
-                  então o lucro líquido por KG (sem contar o custo do frango da granja) é {formatCurrency(16 - costsPerKg.totalCostPerKg)}/KG.
+                  <strong>Exemplo prático:</strong> Se você vende o frango a R$ 16,00/KG e o custo total é {formatCurrency(costsPerKg.totalCostPerKg)}/KG 
+                  (frango da granja: {formatCurrency(costsPerKg.farmPricePerKg)}/KG + custos operacionais: {formatCurrency(costsPerKg.operationalCostsTotal / costsPerKg.totalKgSold)}/KG), 
+                  então o lucro líquido por KG é {formatCurrency(16 - costsPerKg.totalCostPerKg)}/KG.
                 </p>
               </div>
             </div>

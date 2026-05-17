@@ -745,6 +745,16 @@ export async function getCostsPerKgSold(startDate: string, endDate: string) {
   
   const totalKgSold = sales?.reduce((sum, sale) => sum + (Number(sale.quantity) || 0), 0) || 0
   
+  // Buscar preço atual do frango da granja
+  const { data: farmPrice } = await supabase
+    .from('farm_price_history')
+    .select('price_per_kg')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single()
+  
+  const farmPricePerKg = farmPrice?.price_per_kg || 0
+  
   // Agrupar custos por categoria
   const costsByCategory = operationalCosts.reduce((acc: any, cost: any) => {
     const category = cost.operational_cost_categories?.name || 'Outros'
@@ -760,6 +770,17 @@ export async function getCostsPerKgSold(startDate: string, endDate: string) {
     return acc
   }, {})
   
+  // Adicionar custo do frango da granja como uma categoria separada
+  if (farmPricePerKg > 0 && totalKgSold > 0) {
+    const farmCostTotal = farmPricePerKg * totalKgSold
+    costsByCategory['Frango da Granja'] = {
+      total: farmCostTotal,
+      ratePerKg: farmPricePerKg,
+      color: '#ef4444',
+      icon: 'trending-up'
+    }
+  }
+  
   // Calcular custo por KG para cada categoria
   Object.keys(costsByCategory).forEach(category => {
     if (totalKgSold > 0) {
@@ -767,14 +788,19 @@ export async function getCostsPerKgSold(startDate: string, endDate: string) {
     }
   })
   
-  // Calcular custo total por KG
-  const totalCosts = operationalCosts.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  // Calcular custo total por KG (incluindo frango da granja)
+  const operationalCostsTotal = operationalCosts.reduce((sum, cost) => sum + (Number(cost.amount) || 0), 0)
+  const farmCostTotal = farmPricePerKg * totalKgSold
+  const totalCosts = operationalCostsTotal + farmCostTotal
   const totalCostPerKg = totalKgSold > 0 ? totalCosts / totalKgSold : 0
   
   return {
     totalKgSold,
     totalCosts,
     totalCostPerKg,
+    operationalCostsTotal,
+    farmCostTotal,
+    farmPricePerKg,
     costsByCategory
   }
 }
